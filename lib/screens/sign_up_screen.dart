@@ -52,20 +52,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // final user = await _authService.signUpWithEmail(email, password);
-
       final userCred = await _authService.signUpWithEmail(
         email,
         password,
         name,
       );
-
-      // if (user != null) {
-      //   Navigator.pushReplacement(
-      //     context,
-      //     MaterialPageRoute(builder: (_) => const HomeScreen()),
-      //   );
-      // }
       if (userCred?.user != null) {
         Navigator.pushReplacement(
           context,
