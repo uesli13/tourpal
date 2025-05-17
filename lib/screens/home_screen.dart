@@ -1,63 +1,60 @@
 import 'package:flutter/material.dart';
-import 'package:tourpal/services/auth_service.dart';
+import 'package:tourpal/screens/explore_screen.dart';
+import 'package:tourpal/screens/journal_screen.dart';
+import 'package:tourpal/screens/messages_screen.dart';
+import 'package:tourpal/screens/profile_screen.dart';
 import 'package:tourpal/utils/constants.dart';
-import 'package:tourpal/screens/sign_in_screen.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
-void _confirmAndSignOut(BuildContext context) async {
-  final shouldSignOut = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Sign Out'),
-      content: const Text('Are you sure you want to sign out?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Sign Out'),
-        ),
-      ],
-    ),
-  );
-
-  if (shouldSignOut == true) {
-    await AuthService().signOut();
-
-    // Use microtask to safely navigate after widget rebuild
-    Future.microtask(() {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const SignInScreen()),
-        (route) => false,
-      );
-    });
-  }
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
+class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = [
+    ProfileScreen(),
+    ExploreScreen(),
+    JournalScreen(),
+    MessagesScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        title: const Text('Home'),
-        actions: [
-          TextButton(
-            onPressed:() => _confirmAndSignOut(context),
-            child: const Text(
-              'Sign Out',
-              style: TextStyle(color: Colors.white),
-            ),
+      backgroundColor: AppColors.primary,
+      body: _screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore),
+            label: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book),
+            label: 'Journal',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.message),
+            label: 'Messages',
           ),
         ],
-      ),
-
-      body: const Center(
-        child: Text('Welcome to TourPal!'),
       ),
     );
   }

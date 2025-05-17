@@ -1,21 +1,33 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../screens/home_screen.dart';
 
 class GoogleSignInButton extends StatelessWidget {
-  final VoidCallback onPressed;
-
-  const GoogleSignInButton({required this.onPressed, super.key});
+  const GoogleSignInButton({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-        side: const BorderSide(color: Colors.black),
+    return ElevatedButton.icon(
+      icon: Image.asset(
+        'assets/images/google_logo.png',
+        height: 24,
+        width: 24,
       ),
-      child: const Text('Sign In with Google'),
+      label: const Text("Sign in with Google"),
+      onPressed: () async {
+        final userCredential = await AuthService().signInWithGoogle();
+        if (userCredential != null) {
+          // Handle successful login
+            Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+          print("Signed in: ${userCredential.user?.email}");
+        } else {
+          // Show error or keep on login screen
+          print("Sign-in failed or cancelled");
+        }
+      },
     );
   }
 }

@@ -17,6 +17,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _authService        = AuthService();
+  final _nameController = TextEditingController();
   bool _isLoading           = false;
 
   @override
@@ -24,10 +25,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSignUp() async {
+    final name    = _nameController.text.trim();
     final email    = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
@@ -49,14 +52,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = await _authService.signUpWithEmail(email, password);
-      if (user != null) {
-        // Success → navigate to HomeScreen
+      // final user = await _authService.signUpWithEmail(email, password);
+
+      final userCred = await _authService.signUpWithEmail(
+        email,
+        password,
+        name,
+      );
+
+      // if (user != null) {
+      //   Navigator.pushReplacement(
+      //     context,
+      //     MaterialPageRoute(builder: (_) => const HomeScreen()),
+      //   );
+      // }
+      if (userCred?.user != null) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
+
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.message}')),
@@ -92,7 +108,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         const LogoWidget(),
                         const SizedBox(height: 24),
                         // Name TextField
-                        const CustomTextField(labelText: 'Name'),
+                        CustomTextField(
+                          labelText: 'Name',
+                          controller: _nameController,
+                        ),
                         const SizedBox(height: 16),
                         // Email TextField
                         CustomTextField(

@@ -1,0 +1,203 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
+import '../models/user.dart';
+import '../services/user_repository.dart';
+import '../screens/sign_in_screen.dart';
+import '../services/auth_service.dart';
+import '../utils/constants.dart';
+
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  _ProfileScreenState createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final UserRepository _userRepo = UserRepository();
+  late final String _uid;
+
+  @override
+  void initState() {
+    super.initState();
+    final currentUser = fb.FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      // Not signed in, navigate away
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const SignInScreen()),
+        );
+      });
+    } else {
+      _uid = currentUser.uid;
+    }
+  }
+
+  Future<User?> _fetchUser() {
+    return _userRepo.fetchUser(_uid);
+  }
+
+  Future<void> _signOutAndRedirect() async {
+    await AuthService().signOut();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const SignInScreen()),
+      (route) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<User?>(
+      future: _fetchUser(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        final user = snapshot.data;
+        if (user == null) {
+          return const Center(child: Text('User not found'));
+        }
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: AppColors.primary,
+            title: const Text('Profile'),
+            automaticallyImplyLeading: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout),
+                onPressed: _signOutAndRedirect,
+              ),
+            ],
+          ),
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (user.profilePhoto != null && user.profilePhoto!.isNotEmpty)
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundImage: NetworkImage(user.profilePhoto!),
+                    )
+                  else
+                    const CircleAvatar(
+                      radius: 40,
+                      child: Icon(Icons.person, size: 40),
+                    ),
+                  const SizedBox(height: 16),
+                  Text(
+                    user.name ?? 'No Name',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(user.email ?? '', style: const TextStyle(fontSize: 16)),
+                  const Divider(height: 32),
+                  if (user.description != null && user.description!.isNotEmpty) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('About', style: Theme.of(context).textTheme.titleMedium),
+                    ),
+                    Text(user.description!),
+                    const SizedBox(height: 16),
+                  ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Birthdate'),
+                          Text(user.birthdate ?? ''),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Member Since'),
+                          Text(user.regdate ?? ''),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+
+
+
+// import 'package:flutter/material.dart';
+// import 'package:tourpal/services/auth_service.dart';
+// import 'package:tourpal/screens/sign_in_screen.dart';
+// import 'package:tourpal/utils/constants.dart';
+
+// class ProfileScreen extends StatelessWidget {
+//   const ProfileScreen({Key? key}) : super(key: key);
+
+//   Future<void> _signOutAndRedirect(BuildContext context) async {
+//     // 1) Sign out from Firebase & Google
+//     await AuthService().signOut();
+
+//     // 2) Navigate back to SignInScreen, clearing all previous routes
+//     Navigator.of(context).pushAndRemoveUntil(
+//       MaterialPageRoute(builder: (_) => const SignInScreen()),
+//       (route) => false,
+//     );
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return SafeArea(
+//       child: Padding(
+//         padding: const EdgeInsets.all(16),
+//         child: Column(
+//           children: [
+//             // (You can swap this for your real profile info)
+//             const CircleAvatar(
+//               radius: 40,
+//               backgroundImage: NetworkImage(
+//                 'https://i.pravatar.cc/150?img=3',
+//               ),
+//             ),
+//             const SizedBox(height: 12),
+//             const Text(
+//               'Your Name',
+//               style: TextStyle(
+//                 fontSize: 20,
+//                 fontWeight: FontWeight.bold,
+//               ),
+//             ),
+//             const Spacer(),
+
+//             // Sign Out button
+//             ElevatedButton.icon(
+//               icon: const Icon(Icons.logout),
+//               label: const Text('Sign Out'),
+//               style: ElevatedButton.styleFrom(
+//                 backgroundColor: Colors.redAccent,
+//                 padding: const EdgeInsets.symmetric(
+//                   vertical: 12,
+//                   horizontal: 24,
+//                 ),
+//               ),
+//               onPressed: () => _signOutAndRedirect(context),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }

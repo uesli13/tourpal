@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tourpal/screens/home_screen.dart';
 import 'package:tourpal/utils/constants.dart';
 import 'package:tourpal/screens/sign_up_screen.dart';
+import 'package:tourpal/widgets/google_sign_in_button.dart';
 import 'package:tourpal/widgets/logo_widget.dart';
 import 'package:tourpal/widgets/custom_text_field.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -112,6 +113,11 @@ class _SignInScreenState extends State<SignInScreen> {
                           child: const Text('Sign In'),
                         ),
                         const SizedBox(height: 16),
+
+                        // Google Sign In Button
+                        const GoogleSignInButton(),
+                        const SizedBox(height: 16),
+
                         // Sign Up Button
                         TextButton(
                           onPressed: () {

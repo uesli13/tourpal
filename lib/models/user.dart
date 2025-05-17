@@ -5,6 +5,7 @@ class User {
   String? profilePhoto;
   String? description;
   String? birthdate;
+  String? regdate;
 
   User({
     required this.id,
@@ -13,6 +14,7 @@ class User {
     this.profilePhoto,
     required this.description,
     required this.birthdate,
+    required this.regdate,
   });
 
   // Factory constructor to create a User from a JSON map
@@ -24,6 +26,7 @@ class User {
       profilePhoto: json['profilePhoto'] ?? "",
       description: json['description'] ?? "",
       birthdate: json['birthdate'] ?? "",
+      regdate: json['regdate'] ?? "",
     );
   }
 
@@ -36,6 +39,7 @@ class User {
       'profilePhoto': profilePhoto,
       'description': description,
       'birthdate': birthdate,
+      'regdate': regdate,
     };
   }
 }
