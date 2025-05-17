@@ -1,65 +1,37 @@
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// class AuthService {
-//   final FirebaseAuth _auth = FirebaseAuth.instance;
+class AuthService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-//   // Google Sign-In
-//   Future<User?> signInWithGoogle() async {
-//     try {
-//       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-//       if (googleUser == null) return null; // User canceled the sign-in
+  Future<User?> signUpWithEmail(String email, String password) async {
+    final credential = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return credential.user;
+  }
 
-//       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-//       final credential = GoogleAuthProvider.credential(
-//         accessToken: googleAuth.accessToken,
-//         idToken: googleAuth.idToken,
-//       );
+    Future<User?> signInWithEmail(String email, String password) async {
+    final cred = await _auth.signInWithEmailAndPassword(
+      email: email, password: password);
+    return cred.user;
+  }
 
-//       final UserCredential userCredential = await _auth.signInWithCredential(credential);
-//       return userCredential.user;
-//     } catch (e) {
-//       print('Error during Google Sign-In: $e');
-//       rethrow;
-//     }
-//   }
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
 
-//   // Email/Password Sign-Up
-//   Future<User?> signUpWithEmail(String email, String password) async {
-//     try {
-//       final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-//         email: email,
-//         password: password,
-//       );
-//       return userCredential.user;
-//     } catch (e) {
-//       print('Error during Email Sign-Up: $e');
-//       rethrow;
-//     }
-//   }
+  Future<User?> getCurrentUser() async {
+    return _auth.currentUser;
+  }
 
-//   // Email/Password Sign-In
-//   Future<User?> signInWithEmail(String email, String password) async {
-//     try {
-//       final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-//         email: email,
-//         password: password,
-//       );
-//       return userCredential.user;
-//     } catch (e) {
-//       print('Error during Email Sign-In: $e');
-//       rethrow;
-//     }
-//   }
 
-//   // Sign Out
-//   Future<void> signOut() async {
-//     try {
-//       await _auth.signOut();
-//       await GoogleSignIn().signOut();
-//     } catch (e) {
-//       print('Error during Sign-Out: $e');
-//       rethrow;
-//     }
-//   }
-// }
+  Future<void> updateUserProfile(String displayName, String photoURL) async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await user.updateProfile(displayName: displayName, photoURL: photoURL);
+      await user.reload();
+    }
+  }
+
+}

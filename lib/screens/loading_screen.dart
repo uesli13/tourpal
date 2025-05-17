@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tourpal/screens/home_screen.dart';
 import 'package:tourpal/screens/sign_in_screen.dart';
-import 'package:tourpal/utils/constants.dart'; // Import the constants file
+import 'package:tourpal/utils/constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoadingScreen extends StatefulWidget {
   @override
@@ -9,19 +10,29 @@ class LoadingScreen extends StatefulWidget {
 }
 
 class _LoadingScreenState extends State<LoadingScreen> {
+
+  void _checkAuthState() {
+  FirebaseAuth.instance.authStateChanges().listen((User? user) {
+    if (user == null) {
+      // Not signed in
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => SignInScreen()),
+      );
+    } else {
+      // Signed in
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    _navigateToNextScreen();
-  }
-
-  void _navigateToNextScreen() async {
-    // Simulate a loading delay (e.g., fetching user data or initializing the app)
-    await Future.delayed(const Duration(seconds: 3));
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => SignInScreen()),
-    );
+    _checkAuthState();
   }
 
   @override

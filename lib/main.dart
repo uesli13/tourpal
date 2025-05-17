@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:tourpal/screens/loading_screen.dart';
-import 'package:tourpal/utils/constants.dart'; // Import the constants file
+import 'package:tourpal/utils/constants.dart'; 
+import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Remove: await Firebase.initializeApp();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -16,7 +17,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'TourPal',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary), // Use the app color here
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
         useMaterial3: true,
       ),
       home: LoadingScreen(),

@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "145900704034",
+    "project_id": "tourpal-86616",
+    "storage_bucket": "tourpal-86616.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:145900704034:android:38c0b0bcda42fe30be557b",
+        "android_client_info": {
+          "package_name": "com.example.tourpal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "145900704034-ee4snu1p0a4h4r63umo3ejm56qvi5jml.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tourpal",
+            "certificate_hash": "bd04383f9747b53bc4ec4ded8dbcf2b7da3c419d"
+          }
+        },
+        {
+          "client_id": "145900704034-m3ugsh8vh1b28bni04kumpucf1bpsnvs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2x6SRAMJjgieFDnx9eeCWf2UB2MfUaZw"
+        },
+        {
+          "current_key": "AIzaSyAmZu4pWPtlayN8fbku1pp8MmjX_ThZboo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "145900704034-m3ugsh8vh1b28bni04kumpucf1bpsnvs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:145900704034:android:9fb0a6e769f14da0be557b",
+        "android_client_info": {
+          "package_name": "com.tourpal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "145900704034-deq27059o520l3fjm0n1dqt55ko8sprc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tourpal",
+            "certificate_hash": "bd04383f9747b53bc4ec4ded8dbcf2b7da3c419d"
+          }
+        },
+        {
+          "client_id": "145900704034-jlblmaj8u47h6lfdopegq2i3je3hpp04.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tourpal",
+            "certificate_hash": "32a6bdaa2549d7c9a87a8cb3658e93ee85f5b11a"
+          }
+        },
+        {
+          "client_id": "145900704034-m3ugsh8vh1b28bni04kumpucf1bpsnvs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2x6SRAMJjgieFDnx9eeCWf2UB2MfUaZw"
+        },
+        {
+          "current_key": "AIzaSyAmZu4pWPtlayN8fbku1pp8MmjX_ThZboo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "145900704034-m3ugsh8vh1b28bni04kumpucf1bpsnvs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
