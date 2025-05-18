@@ -20,7 +20,7 @@ class Destination {
       id: json['id'] ?? "",
       name: json['name'] ?? "",
       description: json['description'] ?? "",
-      imageurl: json['imageurlurl'] ?? "",
+      imageurl: json['imageurl'] ?? "",
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
     );

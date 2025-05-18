@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tourpal/models/destination.dart';
 import 'package:tourpal/models/tourplan.dart';
 import 'package:tourpal/services/tourplan_repository.dart';
+import 'package:tourpal/widgets/destination_card.dart';
 import '../utils/constants.dart';
 
 class TourPlanDetailsScreen extends StatefulWidget {
@@ -161,32 +162,7 @@ class _TourPlanDetailsScreenState extends State<TourPlanDetailsScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: destinations.length,
                   itemBuilder: (context, index) {
-                    final dest = destinations[index];
-                    return ListTile(
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: dest.imageurl != null && dest.imageurl!.isNotEmpty
-                            ? Image.network(
-                                dest.imageurl!,
-                                width: 48,
-                                height: 48,
-                                fit: BoxFit.cover,
-                              )
-                            : Container(
-                                width: 48,
-                                height: 48,
-                                color: Colors.grey[300],
-                                child: const Icon(Icons.location_on, color: Colors.white),
-                              ),
-                      ),
-                      title: Text(dest.name ?? 'Unnamed'),
-                      subtitle: Text(dest.description ?? ''),
-                    );
-                    // return ListTile(
-                    //   leading: const Icon(Icons.location_on, color: AppColors.secondary),
-                    //   title: Text(dest.name ?? 'Unnamed'),
-                    //   subtitle: Text(dest.description ?? ''),
-                    // );
+                    return DestinationCard(dest: destinations[index]);
                   },
                 );
               },
