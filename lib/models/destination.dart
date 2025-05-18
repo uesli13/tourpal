@@ -2,7 +2,7 @@ class Destination {
   String? id;
   String? name;
   String? description;
-  String? image;
+  String? imageurl;
   double? latitude;
   double? longitude;
 
@@ -10,7 +10,7 @@ class Destination {
     required this.id,
     required this.name,
     required this.description,
-    required this.image,
+    required this.imageurl,
     required this.latitude,
     required this.longitude,
   });
@@ -20,7 +20,7 @@ class Destination {
       id: json['id'] ?? "",
       name: json['name'] ?? "",
       description: json['description'] ?? "",
-      image: json['image'] ?? "",
+      imageurl: json['imageurlurl'] ?? "",
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
     );
@@ -31,7 +31,7 @@ class Destination {
       'id': id,
       'name': name,
       'description': description,
-      'image': image,
+      'imageurlurl': imageurl,
       'latitude': latitude,
       'longitude': longitude,
     };

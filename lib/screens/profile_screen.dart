@@ -37,13 +37,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return _userRepo.fetchUser(_uid);
   }
 
-  Future<void> _signOutAndRedirect() async {
+    void _confirmAndSignOut(BuildContext context) async {
+  final shouldSignOut = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Sign Out'),
+      content: const Text('Are you sure you want to sign out?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Sign Out'),
+        ),
+      ],
+    ),
+  );
+
+  if (shouldSignOut == true) {
     await AuthService().signOut();
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const SignInScreen()),
-      (route) => false,
-    );
+
+    // Use microtask to safely navigate after widget rebuild
+    Future.microtask(() {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const SignInScreen()),
+        (route) => false,
+      );
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -63,12 +87,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Scaffold(
           appBar: AppBar(
             backgroundColor: AppColors.primary,
-            title: const Text('Profile'),
-            automaticallyImplyLeading: false,
+            foregroundColor: Colors.white,
+            title: const Text("Profile"),
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Image.asset(
+                'assets/images/tourpal_logo.png',
+                fit: BoxFit.contain,
+            ),
+          ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.logout),
-                onPressed: _signOutAndRedirect,
+                onPressed:() => _confirmAndSignOut(context),
               ),
             ],
           ),

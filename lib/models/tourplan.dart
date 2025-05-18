@@ -30,7 +30,7 @@ class TourPlan{
       createdAt: json['createdAt'] ?? "",
       creatorId: json['creatorId'] ?? "",
       image: json['image'] ?? "",
-      destinations: (json['destinations'] as List<dynamic>?)
+      destinations: (json['destination'] as List<dynamic>?)
           ?.map((e) => Destination.fromJson(e))
           .toList(),
     );
@@ -45,7 +45,7 @@ class TourPlan{
       'createdAt': createdAt,
       'creatorId': creatorId,
       'image': image,
-      'destinations': destinations?.map((e) => e.toJson()).toList(),
+      'destination': destinations?.map((e) => e.toJson()).toList(),
     };
   }
 }

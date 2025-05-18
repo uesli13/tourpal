@@ -128,7 +128,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           },
                           child: const Text('Don’t have an account? Sign Up'),
                         ),
-                        const Spacer(), // Pushes content to the top
+                        const Spacer(),
                       ],
                     ),
                   ),

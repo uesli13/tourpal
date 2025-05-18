@@ -1,12 +1,10 @@
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:tourpal/services/user_repository.dart';
 import '../models/user.dart'; 
 class AuthService {
 
   final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
   final UserRepository _users = UserRepository();
 
   Future<fb.UserCredential?> signUpWithEmail(String email, String password, String name) async {

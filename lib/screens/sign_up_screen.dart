@@ -145,7 +145,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           },
                           child: const Text('Already have an account? Sign In'),
                         ),
-                        const Spacer(), // Pushes content to the top
+                        const Spacer(),
                       ],
                     ),
                   ),
