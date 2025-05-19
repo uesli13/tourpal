@@ -52,7 +52,7 @@ class TourPlanCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(city, style: const TextStyle(color: Colors.grey)),
                   const SizedBox(height: 8),
-                  Text('Places: $destinationCount'),
+                  Text('Destinations: $destinationCount'),
                   const SizedBox(height: 4),
                   Row(
                     children: [

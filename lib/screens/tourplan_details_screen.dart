@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tourpal/models/destination.dart';
 import 'package:tourpal/models/tourplan.dart';
+import 'package:tourpal/screens/maps_preview_screen.dart';
 import 'package:tourpal/services/tourplan_repository.dart';
 import 'package:tourpal/widgets/destination_card.dart';
 import '../utils/constants.dart';
@@ -139,6 +140,7 @@ class _TourPlanDetailsScreenState extends State<TourPlanDetailsScreen> {
               ),
             ),
             const SizedBox(height: 8),
+
             FutureBuilder<List<Destination>>(
               future: _destinationsFuture,
               builder: (context, snapshot) {
@@ -157,36 +159,45 @@ class _TourPlanDetailsScreenState extends State<TourPlanDetailsScreen> {
                 }
 
                 final destinations = snapshot.data!;
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: destinations.length,
-                  itemBuilder: (context, index) {
-                    return DestinationCard(dest: destinations[index]);
-                  },
+                return Column(
+                  children: [
+                    // your ListView
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: destinations.length,
+                      itemBuilder: (context, index) {
+                        return DestinationCard(dest: destinations[index]);
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Now you have `destinations` in scope
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.secondary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 48),
+                        ),
+                        onPressed: () async {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MapsPreviewScreen(destinations: destinations),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.map),
+                        label: const Text("View on Map"),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
-
-            const SizedBox(height: 24),
-
-            // View on map button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.secondary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 48),
-                ),
-                onPressed: () {
-                  // TODO: Implement this function
-                },
-                icon: const Icon(Icons.map),
-                label: const Text("View on Map"),
-              ),
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       ),

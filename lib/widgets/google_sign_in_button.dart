@@ -22,10 +22,8 @@ class GoogleSignInButton extends StatelessWidget {
             context,
             MaterialPageRoute(builder: (_) => const HomeScreen()),
           );
-          print("Signed in: ${userCredential.user?.email}");
         } else {
           // Show error or keep on login screen
-          print("Sign-in failed or cancelled");
         }
       },
     );
