@@ -7,6 +7,7 @@ class Destination {
   String? imageurl;
   double? latitude;
   double? longitude;
+  int? order;
 
   Destination({
     required this.id,
@@ -15,6 +16,7 @@ class Destination {
     required this.imageurl,
     required this.latitude,
     required this.longitude,
+    this.order, 
   });
   // Factory constructor to create a Destination from a JSON map
   factory Destination.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,7 @@ class Destination {
       // longitude: (json['longitude'] as num?)?.toDouble(),
       latitude: coordinates?.latitude,
       longitude: coordinates?.longitude,
+      order: json['order'],
     );
   }
   // Method to convert a Destination object to a JSON map
@@ -41,6 +44,7 @@ class Destination {
       'imageurl': imageurl,
       'latitude': latitude,
       'longitude': longitude,
+      'order': order,
     };
   }
 }

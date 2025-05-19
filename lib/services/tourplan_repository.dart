@@ -29,6 +29,7 @@ class TourPlanRepository {
       .collection(_collection)
       .doc(tourPlanId)
       .collection('destination')
+      .orderBy('order') 
       .get();
 
     return snap.docs.map((doc) {

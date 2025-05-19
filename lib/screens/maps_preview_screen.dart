@@ -58,8 +58,8 @@ LatLngBounds boundsFromMarkers(Set<Marker> markers) {
             markerId: MarkerId(dest.id ?? UniqueKey().toString()),
             position: LatLng(dest.latitude!, dest.longitude!),
             infoWindow: InfoWindow(
-              title: dest.name,
-              snippet: dest.description,
+              title: "${dest.order}. ${dest.name}",
+              // snippet: dest.description,
             ),
           ),
         );
