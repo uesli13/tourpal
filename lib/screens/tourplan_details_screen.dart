@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:tourpal/models/destination.dart';
 import 'package:tourpal/models/tourplan.dart';
 import 'package:tourpal/screens/maps_preview_screen.dart';
+import 'package:tourpal/screens/tourplan_ratings_screen.dart';
+import 'package:tourpal/services/rating_repository.dart';
 import 'package:tourpal/services/tourplan_repository.dart';
 import 'package:tourpal/widgets/destination_card.dart';
 import '../utils/constants.dart';
@@ -88,6 +90,9 @@ class _TourPlanDetailsScreenState extends State<TourPlanDetailsScreen> {
                 // On error or no data, default to 0
                 final count = snap.data ?? 0;
                 return Padding(
+
+
+
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
@@ -97,9 +102,56 @@ class _TourPlanDetailsScreenState extends State<TourPlanDetailsScreen> {
                         '$count Destinations',
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
+
+                      const Spacer(),  // pushes Ratings button to the right
+
+                      // Average rating + Ratings button
+                      FutureBuilder<double>(
+                        future: TourplanRatingRepository().getAverageRating(plan.id!),
+                        builder: (ctx, avgSnap) {
+                          final avg = (avgSnap.data ?? 0.0).toStringAsFixed(1);
+                          return ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.secondary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.star, size: 18),
+                            label: Text(avg),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => TourplanRatingsScreen(tourPlanId: plan.id!),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ],
                   ),
+
+
+
+
+
+                  
                 );
+
+                // return Padding(
+                //   padding: const EdgeInsets.symmetric(horizontal: 16),
+                //   child: Row(
+                //     children: [
+                //       const Icon(Icons.place, color: AppColors.primary),
+                //       const SizedBox(width: 8),
+                //       Text(
+                //         '$count Destinations',
+                //         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                //       ),
+                //     ],
+                //   ),
+                // );
               },
             ),
 
