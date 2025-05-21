@@ -90,9 +90,6 @@ class _TourPlanDetailsScreenState extends State<TourPlanDetailsScreen> {
                 // On error or no data, default to 0
                 final count = snap.data ?? 0;
                 return Padding(
-
-
-
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
@@ -103,7 +100,7 @@ class _TourPlanDetailsScreenState extends State<TourPlanDetailsScreen> {
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
 
-                      const Spacer(),  // pushes Ratings button to the right
+                      const Spacer(),
 
                       // Average rating + Ratings button
                       FutureBuilder<double>(
@@ -130,28 +127,8 @@ class _TourPlanDetailsScreenState extends State<TourPlanDetailsScreen> {
                         },
                       ),
                     ],
-                  ),
-
-
-
-
-
-                  
+                  ), 
                 );
-
-                // return Padding(
-                //   padding: const EdgeInsets.symmetric(horizontal: 16),
-                //   child: Row(
-                //     children: [
-                //       const Icon(Icons.place, color: AppColors.primary),
-                //       const SizedBox(width: 8),
-                //       Text(
-                //         '$count Destinations',
-                //         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                //       ),
-                //     ],
-                //   ),
-                // );
               },
             ),
 

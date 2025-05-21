@@ -7,6 +7,7 @@ class AuthService {
   final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
   final UserRepository _users = UserRepository();
 
+  fb.User? get currentUser => _auth.currentUser;
   Future<fb.UserCredential?> signUpWithEmail(String email, String password, String name) async {
     final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
     if (cred.user != null) {

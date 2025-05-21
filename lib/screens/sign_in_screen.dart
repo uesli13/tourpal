@@ -5,8 +5,12 @@ import 'package:tourpal/screens/sign_up_screen.dart';
 import 'package:tourpal/widgets/google_sign_in_button.dart';
 import 'package:tourpal/widgets/logo_widget.dart';
 import 'package:tourpal/widgets/custom_text_field.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tourpal/services/auth_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/auth/auth_bloc.dart';
+import '../blocs/auth/auth_event.dart';
+import '../blocs/auth/auth_state.dart';
+
+
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({Key? key}) : super(key: key);
@@ -17,8 +21,6 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService        = AuthService();
-  bool _isLoading           = false;
 
   @override
   void dispose() {
@@ -27,120 +29,110 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-
-    Future<void> _handleSignIn() async {
+  void _onSignInPressed() {
     final email    = _emailController.text.trim();
     final password = _passwordController.text.trim();
-
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter email & password')),
       );
       return;
     }
+    context.read<AuthBloc>().add(SignInRequested(email, password));
+  }
 
-    setState(() => _isLoading = true);
-
-    try {
-      final user = await _authService.signInWithEmail(email, password);
-      if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sign‑in failed: ${e.message}')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unexpected error: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+  void _onGoogleSignInPressed() {
+    context.read<AuthBloc>().add(GoogleSignInRequested());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        color: AppColors.primary, 
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight,
-                  ),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Logo
-                        const LogoWidget(),
-                        const SizedBox(height: 24),
-                        
-                        // Email
-                        CustomTextField(
-                          labelText: 'Email',
-                          controller: _emailController,
-                        ),
-                        const SizedBox(height: 16),
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthSuccess) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          }
+          if (state is AuthFailure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Sign‑in failed: ${state.error}')),
+            );
+          }
+        },
+        child: Container(
+          color: AppColors.primary,
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const LogoWidget(),
+                          const SizedBox(height: 24),
 
-                        // Password
-                        CustomTextField(
-                          labelText: 'Password',
-                          obscureText: true,
-                          controller: _passwordController,
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Sign In Button
-                        if (_isLoading) 
-                          const Center(child: CircularProgressIndicator())
-                        else
-                        ElevatedButton(
-                          onPressed: _handleSignIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12, horizontal: 24),
+                          CustomTextField(
+                            labelText: 'Email',
+                            controller: _emailController,
                           ),
-                          child: const Text('Sign In'),
-                        ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                        // Google Sign In Button
-                        const GoogleSignInButton(),
-                        const SizedBox(height: 16),
+                          CustomTextField(
+                            labelText: 'Password',
+                            obscureText: true,
+                            controller: _passwordController,
+                          ),
+                          const SizedBox(height: 24),
 
-                        // Sign Up Button
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => SignUpScreen()),
-                            );
-                          },
-                          child: const Text('Don’t have an account? Sign Up'),
-                        ),
-                        const Spacer(),
-                      ],
+                          BlocBuilder<AuthBloc, AuthState>(
+                            builder: (context, state) {
+                              if (state is AuthLoading) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+                              return ElevatedButton(
+                                onPressed: _onSignInPressed,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12, horizontal: 24),
+                                ),
+                                child: const Text('Sign In'),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          GoogleSignInButton(onPressed: _onGoogleSignInPressed),
+
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => SignUpScreen()),
+                              );
+                            },
+                            child: const Text('Don’t have an account? Sign Up'),
+                          ),
+                          const Spacer(),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
-
-
-
 }
