@@ -1,4 +1,4 @@
- buildscript {
+buildscript {
      repositories {
          google()
          mavenCentral()
@@ -12,6 +12,25 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+    
+    // Force all subprojects to use Java 11 to fix obsolete version warnings
+    afterEvaluate {
+        if (hasProperty("android")) {
+            extensions.configure<com.android.build.gradle.BaseExtension> {
+                compileOptions {
+                    sourceCompatibility = JavaVersion.VERSION_11
+                    targetCompatibility = JavaVersion.VERSION_11
+                }
+            }
+        }
+        
+        // Fix Kotlin JVM target compatibility
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+            kotlinOptions {
+                jvmTarget = "11"
+            }
+        }
     }
 }
 
