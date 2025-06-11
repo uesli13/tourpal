@@ -1,5 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../models/tour_plan.dart';
+import '../../../tours/domain/repositories/tour_repository.dart';
+import '../../../tours/presentation/screens/create_tour_screen.dart';
+import '../../../tours/presentation/screens/edit_tour_screen.dart';
+import '../../../tours/presentation/screens/tour_preview_screen.dart';
+
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
+  }
+}
 
 class MyToursScreen extends StatefulWidget {
   const MyToursScreen({super.key});
@@ -8,13 +22,18 @@ class MyToursScreen extends StatefulWidget {
   State<MyToursScreen> createState() => _MyToursScreenState();
 }
 
-class _MyToursScreenState extends State<MyToursScreen> with SingleTickerProviderStateMixin {
+class _MyToursScreenState extends State<MyToursScreen>
+    with TickerProviderStateMixin {
   late TabController _tabController;
+  List<TourPlan> _allTours = [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadTours();
   }
 
   @override
@@ -23,151 +42,149 @@ class _MyToursScreenState extends State<MyToursScreen> with SingleTickerProvider
     super.dispose();
   }
 
+  Future<void> _loadTours() async {
+    try {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        if (!mounted) return;
+        setState(() {
+          _error = 'User not authenticated';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final tourRepository = context.read<TourRepository>();
+      final tours = await tourRepository.getToursByGuideId(currentUser.uid);
+      
+      if (!mounted) return;
+      setState(() {
+        _allTours = tours;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to load tours: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<TourPlan> get _activeTours => _allTours
+      .where((tour) => tour.status == TourStatus.published)
+      .toList();
+
+  List<TourPlan> get _draftTours => _allTours
+      .where((tour) => tour.status == TourStatus.draft)
+      .toList();
+
+  List<TourPlan> get _pastTours => []; // For now, return empty list since TourStatus only has draft and published
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text(
           'My Tours',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 24,
-            color: Colors.white,
+            color: AppColors.textPrimary,
           ),
         ),
-        backgroundColor: Colors.orange,
+        backgroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.white),
-            onPressed: () {
-              _showCreateTourDialog(context);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.analytics, color: Colors.white),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Tour analytics coming soon!')),
-              );
-            },
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(text: 'Active Tours'),
-            Tab(text: 'Draft Tours'),
-            Tab(text: 'Past Tours'),
+          labelColor: AppColors.secondary,
+          unselectedLabelColor: AppColors.textSecondary,
+          indicatorColor: AppColors.secondary,
+          indicatorWeight: 3,
+          tabs: [
+            Tab(text: 'Active (${_activeTours.length})'),
+            Tab(text: 'Drafts (${_draftTours.length})'),
+            Tab(text: 'Past (${_pastTours.length})'),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildActiveTours(),
-          _buildDraftTours(),
-          _buildPastTours(),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.secondary))
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: AppColors.gray400),
+                      const SizedBox(height: 16),
+                      Text(
+                        _error!,
+                        style: TextStyle(color: AppColors.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadTours,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.secondary,
+                        ),
+                        child: const Text('Retry', style: TextStyle(color: AppColors.textOnSecondary)),
+                      ),
+                    ],
+                  ),
+                )
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildTourList(_activeTours),
+                    _buildTourList(_draftTours),
+                    _buildTourList(_pastTours),
+                  ],
+                ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _showCreateTourDialog(context);
-        },
-        backgroundColor: Colors.orange,
+        onPressed: () => _navigateToCreateTour(context),
+        backgroundColor: AppColors.secondary,
+        foregroundColor: AppColors.textOnSecondary,
         icon: const Icon(Icons.add),
         label: const Text('Create Tour'),
       ),
     );
   }
 
-  Widget _buildActiveTours() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildTourCard(
-          title: 'Historic Downtown Walking Tour',
-          description: 'Explore the rich history of our beautiful downtown area',
-          price: 25.0,
-          duration: '2 hours',
-          bookings: 8,
-          status: 'Active',
-          statusColor: Colors.green,
-          imageUrl: null,
-        ),
-        const SizedBox(height: 16),
-        _buildTourCard(
-          title: 'Sunset Photography Workshop',
-          description: 'Learn photography techniques during golden hour',
-          price: 45.0,
-          duration: '3 hours',
-          bookings: 12,
-          status: 'Active',
-          statusColor: Colors.green,
-          imageUrl: null,
-        ),
-        const SizedBox(height: 16),
-        _buildEmptyState(
-          icon: Icons.tour,
-          title: 'Ready to Create More Tours?',
-          subtitle: 'Share your expertise with travelers around the world',
-          buttonText: 'Create New Tour',
-        ),
-      ],
-    );
-  }
+  Widget _buildTourList(List<TourPlan> tours) {
+    if (tours.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.tour,
+        title: 'No Tours Found',
+        subtitle: 'Start by creating your first tour!',
+        buttonText: 'Create New Tour',
+      );
+    }
 
-  Widget _buildDraftTours() {
-    return ListView(
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        _buildTourCard(
-          title: 'Food Market Discovery Tour',
-          description: 'Taste local flavors and meet passionate vendors',
-          price: 35.0,
-          duration: '2.5 hours',
-          bookings: 0,
-          status: 'Draft',
-          statusColor: Colors.orange,
-          imageUrl: null,
-        ),
-        const SizedBox(height: 16),
-        _buildEmptyState(
-          icon: Icons.edit,
-          title: 'Finish Your Draft Tours',
-          subtitle: 'Complete your tour details to start accepting bookings',
-          buttonText: 'Continue Editing',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPastTours() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildTourCard(
-          title: 'Art Gallery Walking Tour',
-          description: 'Discover local artists and their incredible works',
-          price: 30.0,
-          duration: '2 hours',
-          bookings: 24,
-          status: 'Completed',
-          statusColor: Colors.grey,
-          imageUrl: null,
-        ),
-        const SizedBox(height: 16),
-        _buildEmptyState(
-          icon: Icons.history,
-          title: 'Your Tour History',
-          subtitle: 'View insights and feedback from your past tours',
-          buttonText: 'View Analytics',
-        ),
-      ],
+      itemCount: tours.length,
+      itemBuilder: (context, index) {
+        final tour = tours[index];
+        return _buildTourCard(
+          title: tour.title,
+          description: tour.description ?? 'No description available',
+          price: tour.price.toDouble(),
+          duration: '${tour.duration} hours',
+          bookings: 0, // TourPlan doesn't have bookings property, so use 0 for now
+          status: tour.status.name.capitalize(),
+          statusColor: tour.status == TourStatus.published ? AppColors.secondary : AppColors.secondaryLight,
+          imageUrl: tour.coverImageUrl,
+          onEdit: () => _navigateToEditTour(tour),
+          onView: () => _navigateToTourPreview(tour),
+        );
+      },
     );
   }
 
@@ -180,6 +197,8 @@ class _MyToursScreenState extends State<MyToursScreen> with SingleTickerProvider
     required String status,
     required Color statusColor,
     String? imageUrl,
+    required VoidCallback onEdit,
+    required VoidCallback onView,
   }) {
     return Card(
       elevation: 2,
@@ -193,18 +212,94 @@ class _MyToursScreenState extends State<MyToursScreen> with SingleTickerProvider
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              gradient: LinearGradient(
-                colors: [Colors.orange.withOpacity(0.7), Colors.orange.withOpacity(0.9)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
             ),
-            child: const Center(
-              child: Icon(
-                Icons.tour,
-                size: 48,
-                color: Colors.white,
-              ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: imageUrl != null && imageUrl.isNotEmpty
+                  ? Stack(
+                      children: [
+                        // Cover Image
+                        Image.network(
+                          imageUrl,
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              height: 150,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [AppColors.secondaryLight.withValues(alpha: .7), AppColors.secondaryLight.withValues(alpha: .9)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 150,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [AppColors.secondaryLight.withValues(alpha: .7), AppColors.secondaryLight.withValues(alpha: .9)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.tour,
+                                  size: 48,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        // Gradient overlay for better text readability
+                        Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.3),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Container(
+                      height: 150,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.secondaryLight.withValues(alpha: .7), AppColors.secondaryLight.withValues(alpha: .9)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.tour,
+                          size: 48,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
             ),
           ),
           
@@ -229,7 +324,7 @@ class _MyToursScreenState extends State<MyToursScreen> with SingleTickerProvider
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
+                        color: statusColor.withValues(alpha: .1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -283,11 +378,7 @@ class _MyToursScreenState extends State<MyToursScreen> with SingleTickerProvider
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Edit tour coming soon!')),
-                          );
-                        },
+                        onPressed: onEdit,
                         icon: const Icon(Icons.edit),
                         label: const Text('Edit'),
                       ),
@@ -295,14 +386,10 @@ class _MyToursScreenState extends State<MyToursScreen> with SingleTickerProvider
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('View details coming soon!')),
-                          );
-                        },
+                        onPressed: onView,
                         icon: const Icon(Icons.visibility),
                         label: const Text('View'),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondaryLight),
                       ),
                     ),
                   ],
@@ -357,9 +444,9 @@ class _MyToursScreenState extends State<MyToursScreen> with SingleTickerProvider
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              _showCreateTourDialog(context);
+              _navigateToCreateTour(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondaryLight),
             child: Text(buttonText, style: const TextStyle(color: Colors.white)),
           ),
         ],
@@ -367,29 +454,84 @@ class _MyToursScreenState extends State<MyToursScreen> with SingleTickerProvider
     );
   }
 
-  void _showCreateTourDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create New Tour'),
-        content: const Text('The tour creation feature is coming soon! You\'ll be able to create detailed tour experiences with photos, itineraries, and pricing.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('We\'ll notify you when this feature is ready!')),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Notify Me', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+  void _navigateToCreateTour(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CreateTourScreen(),
       ),
-    );
+    ).then((tourId) {
+      if (tourId != null) {
+        // Tour was created successfully, refresh the tours list
+        _loadTours();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Tour created successfully! 🎉'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  void _navigateToTourPreview(TourPlan tour) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TourPreviewScreen(
+          tourPlan: tour,
+          places: tour.places,
+        ),
+      ),
+    ).then((result) {
+      if (result == 'edit') {
+        // User clicked Edit from preview, navigate to edit screen
+        _navigateToEditTour(tour);
+      } else if (result == 'published') {
+        // Tour was published successfully, refresh the tours list
+        _loadTours();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Tour published successfully! 🎉\nIt\'s now visible to travelers.'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+  }
+
+  void _navigateToEditTour(TourPlan tour) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditTourScreen(
+          tourPlan: tour,
+        ),
+      ),
+    ).then((tourId) {
+      if (tourId != null) {
+        // Tour was updated successfully, refresh the tours list
+        _loadTours();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Tour updated successfully! 🎉'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    });
   }
 }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../dashboard/presentation/screens/main_dashboard_page.dart';
+import '../../../dashboard/presentation/screens/main_dashboard_screen.dart';
 import '../../../explore/presentation/screens/explore_screen.dart';
-import '../../../messages/presentation/screens/messages_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 import '../../../guide/presentation/screens/guide_dashboard_screen.dart';
 import '../../../guide/presentation/screens/my_tours_screen.dart';
+import '../../../guide/presentation/screens/guide_schedule_screen.dart';
+import '../../../bookings/presentation/screens/my_bookings_screen.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -19,6 +20,7 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  bool _wasGuide = false; // Track previous role state
 
   void _navigateToTab(int index) {
     setState(() {
@@ -38,6 +40,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
         final isGuide = authState.user.isGuide;
 
+        // Reset currentIndex when switching roles to prevent out-of-bounds error
+        if (_wasGuide != isGuide) {
+          _currentIndex = 0; // Reset to first tab when role changes
+          _wasGuide = isGuide; // Update the previous role state
+        }
+
         // Different screens based on user mode
         final screens = isGuide ? _getGuideScreens() : _getTravelerScreens();
 
@@ -56,7 +64,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return [
       MainDashboardScreen(onNavigateToTab: _navigateToTab),
       const ExploreScreen(),
-      const MessagesScreen(),
+      const MyBookingsScreen(),
       const ProfileScreen(),
     ];
   }
@@ -65,40 +73,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return [
       GuideDashboardScreen(onNavigateToTab: _navigateToTab),
       const MyToursScreen(),
-      const MessagesScreen(),
+      const GuideScheduleScreen(),
       const ProfileScreen(),
     ];
   }
 
   Widget _buildBottomNavigationBar(bool isGuide) {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: isGuide ? Colors.orange : AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        items: isGuide
-            ? _getGuideNavigationItems()
-            : _getTravelerNavigationItems(),
-      ),
+    return BottomNavigationBar(
+      currentIndex: _currentIndex,
+      onTap: (index) => setState(() => _currentIndex = index),
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Colors.white,
+      selectedItemColor: isGuide ? AppColors.secondary : AppColors.primary,
+      unselectedItemColor: AppColors.textSecondary,
+      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+      selectedFontSize: 12,
+      unselectedFontSize: 12,
+      items: isGuide
+          ? _getGuideNavigationItems()
+          : _getTravelerNavigationItems(),
     );
   }
 
@@ -115,9 +108,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         label: 'Explore',
       ),
       BottomNavigationBarItem(
-        icon: Icon(Icons.chat_bubble_outline),
-        activeIcon: Icon(Icons.chat_bubble),
-        label: 'Messages',
+        icon: Icon(Icons.event_outlined),
+        activeIcon: Icon(Icons.event),
+        label: 'My Tours',
       ),
       BottomNavigationBarItem(
         icon: Icon(Icons.person_outline),
@@ -140,9 +133,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         label: 'My Tours',
       ),
       BottomNavigationBarItem(
-        icon: Icon(Icons.chat_bubble_outline),
-        activeIcon: Icon(Icons.chat_bubble),
-        label: 'Messages',
+        icon: Icon(Icons.schedule_outlined),
+        activeIcon: Icon(Icons.schedule),
+        label: 'Schedule',
       ),
       BottomNavigationBarItem(
         icon: Icon(Icons.person_outline),

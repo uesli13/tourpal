@@ -1,7 +1,9 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/tour.dart';
+import 'package:tourpal/core/utils/bloc_error_handler.dart';
+import 'package:tourpal/core/exceptions/app_exceptions.dart';
+import 'package:tourpal/core/utils/error_handler.dart';
+import 'package:tourpal/models/tour_plan.dart';
 
-/// Base class for all tour states
 abstract class TourState extends Equatable {
   const TourState();
 
@@ -9,156 +11,98 @@ abstract class TourState extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Initial state when the BLoC is first created
 class TourInitial extends TourState {
   const TourInitial();
-
-  @override
-  String toString() => 'TourInitial()';
 }
 
-/// State when tour operation is in progress
 class TourLoading extends TourState {
   const TourLoading();
-
-  @override
-  String toString() => 'TourLoading()';
 }
 
-/// State when tours are successfully loaded
-class ToursLoaded extends TourState {
-  final List<Tour> tours;
-
-  const ToursLoaded({required this.tours});
-
-  @override
-  List<Object> get props => [tours];
-
-  @override
-  String toString() => 'ToursLoaded(tours: ${tours.length})';
-}
-
-/// State when a single tour is successfully loaded
 class TourLoaded extends TourState {
-  final Tour tour;
+  final List<TourPlan> tours;
+  final List<TourPlan> filteredTours;
+  final String? searchQuery;
+  final TourStatus? statusFilter;
 
-  const TourLoaded({required this.tour});
+  const TourLoaded({
+    required this.tours,
+    required this.filteredTours,
+    this.searchQuery,
+    this.statusFilter,
+  });
 
   @override
-  List<Object> get props => [tour];
+  List<Object?> get props => [tours, filteredTours, searchQuery, statusFilter];
 
-  @override
-  String toString() => 'TourLoaded(tour: ${tour.title})';
+  TourLoaded copyWith({
+    List<TourPlan>? tours,
+    List<TourPlan>? filteredTours,
+    String? searchQuery,
+    TourStatus? statusFilter,
+  }) {
+    return TourLoaded(
+      tours: tours ?? this.tours,
+      filteredTours: filteredTours ?? this.filteredTours,
+      searchQuery: searchQuery ?? this.searchQuery,
+      statusFilter: statusFilter ?? this.statusFilter,
+    );
+  }
 }
 
-/// State when a tour is successfully created
-class TourCreateSuccess extends TourState {
-  final Tour tour;
-
-  const TourCreateSuccess({required this.tour});
-
+class TourError extends TourState implements BaseErrorState {
   @override
-  List<Object> get props => [tour];
-
-  @override
-  String toString() => 'TourCreateSuccess(tour: ${tour.title})';
-}
-
-/// State when a tour is successfully saved as draft
-class TourDraftSaved extends TourState {
-  final Tour tour;
-
-  const TourDraftSaved({required this.tour});
-
-  @override
-  List<Object> get props => [tour];
-
-  @override
-  String toString() => 'TourDraftSaved(tour: ${tour.title})';
-}
-
-/// State when a tour is successfully published
-class TourPublished extends TourState {
-  final Tour tour;
-
-  const TourPublished({required this.tour});
-
-  @override
-  List<Object> get props => [tour];
-
-  @override
-  String toString() => 'TourPublished(tour: ${tour.title})';
-}
-
-/// State when a tour is successfully updated
-class TourUpdateSuccess extends TourState {
-  final Tour tour;
-
-  const TourUpdateSuccess({required this.tour});
-
-  @override
-  List<Object> get props => [tour];
-
-  @override
-  String toString() => 'TourUpdateSuccess(tour: ${tour.title})';
-}
-
-/// State when a tour is successfully deleted
-class TourDeleteSuccess extends TourState {
-  final String tourId;
-
-  const TourDeleteSuccess({required this.tourId});
-
-  @override
-  List<Object> get props => [tourId];
-
-  @override
-  String toString() => 'TourDeleteSuccess(tourId: $tourId)';
-}
-
-/// State when tour validation fails
-class TourValidationError extends TourState {
-  final List<String> errors;
-
-  const TourValidationError({required this.errors});
-
-  @override
-  List<Object> get props => [errors];
-
-  @override
-  String toString() => 'TourValidationError(errors: $errors)';
-}
-
-/// State when a tour operation fails
-class TourError extends TourState {
   final String message;
+  @override
   final String? errorCode;
+  @override
+  final ErrorSeverity severity;
+  @override
+  final bool canRetry;
+  @override
+  final Map<String, dynamic>? context;
 
   const TourError({
     required this.message,
     this.errorCode,
+    this.severity = ErrorSeverity.error,
+    this.canRetry = true,
+    this.context,
   });
 
-  @override
-  List<Object?> get props => [message, errorCode];
+  /// Factory constructor for creating TourError from AppException
+  factory TourError.fromException(AppException exception) {
+    return TourError(
+      message: exception.userMessage,
+      errorCode: exception.code,
+      severity: exception.severity,
+      canRetry: ErrorHandler.shouldRetry(exception),
+      context: exception.context,
+    );
+  }
 
   @override
-  String toString() => 'TourError(message: $message, errorCode: $errorCode)';
+  List<Object?> get props => [message, errorCode, severity, canRetry, context];
 }
 
-/// State when tour search results are loaded
-class TourSearchResults extends TourState {
-  final List<Tour> tours;
-  final String searchQuery;
+class TourDetailsLoading extends TourState {
+  const TourDetailsLoading();
+}
 
-  const TourSearchResults({
-    required this.tours,
-    required this.searchQuery,
-  });
+class TourDetailsLoaded extends TourState {
+  final TourPlan tour;
 
-  @override
-  List<Object> get props => [tours, searchQuery];
+  const TourDetailsLoaded(this.tour);
 
   @override
-  String toString() => 'TourSearchResults(tours: ${tours.length}, query: $searchQuery)';
+  List<Object> get props => [tour];
+}
+
+class TourActionSuccess extends TourState {
+  final String message;
+
+  const TourActionSuccess(this.message);
+
+  @override
+  List<Object> get props => [message];
 }

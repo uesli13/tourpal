@@ -1,118 +1,81 @@
-import 'package:equatable/equatable.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Simple booking model following TourPal's KEEP THINGS SIMPLE principle
-class Booking extends Equatable {
+class Booking {
   final String id;
-  final String userId;
-  final String tourId;
-  final String guideId;
-  final String tourTitle;
-  final DateTime bookingDate;
-  final DateTime tourDate;
-  final int numberOfPeople;
-  final double totalPrice;
-  final BookingStatus status;
-  final String? guideMessage;
-  final DateTime createdAt;
+  final String tourInstanceId;
+  final String tourPlanId;
+  final String travelerId;
+  final Timestamp bookedAt;
+  final String status; // "pending", "confirmed", "cancelled"
+  final Timestamp startTime; // Exact tour start date and time
 
-  const Booking({
+  Booking({
     required this.id,
-    required this.userId,
-    required this.tourId,
-    required this.guideId,
-    required this.tourTitle,
-    required this.bookingDate,
-    required this.tourDate,
-    required this.numberOfPeople,
-    required this.totalPrice,
+    required this.tourInstanceId,
+    required this.tourPlanId,
+    required this.travelerId,
+    required this.bookedAt,
     required this.status,
-    this.guideMessage,
-    required this.createdAt,
+    required this.startTime,
   });
 
-  factory Booking.fromMap(Map<String, dynamic> map, String id) {
-    return Booking(
-      id: id,
-      userId: map['userId'] as String? ?? '',
-      tourId: map['tourId'] as String? ?? '',
-      guideId: map['guideId'] as String? ?? '',
-      tourTitle: map['tourTitle'] as String? ?? '',
-      bookingDate: _parseDateTime(map['bookingDate']),
-      tourDate: _parseDateTime(map['tourDate']),
-      numberOfPeople: map['numberOfPeople'] as int? ?? 1,
-      totalPrice: (map['totalPrice'] as num?)?.toDouble() ?? 0.0,
-      status: BookingStatus.values.firstWhere(
-        (status) => status.name == (map['status'] as String? ?? 'pending'),
-        orElse: () => BookingStatus.pending,
-      ),
-      guideMessage: map['guideMessage'] as String?,
-      createdAt: _parseDateTime(map['createdAt']),
-    );
-  }
+  String get userId => travelerId;
+  String get userName => 'User'; // Placeholder - would need proper user lookup
 
-  static DateTime _parseDateTime(dynamic value) {
-    if (value is Timestamp) {
-      return value.toDate();
-    } else if (value is int) {
-      return DateTime.fromMillisecondsSinceEpoch(value);
-    } else {
-      return DateTime.now();
-    }
+  factory Booking.fromMap(Map<String, dynamic> map, String documentId) {
+    return Booking(
+      id: documentId,
+      tourInstanceId: map['tourInstanceId'] as String,
+      tourPlanId: map['tourPlanId'] as String, // NEW: Parse from map
+      travelerId: map['travelerId'] as String,
+      bookedAt: map['bookedAt'] as Timestamp,
+      status: map['status'] as String,
+      startTime: map['startTime'] as Timestamp,
+    );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'userId': userId,
-      'tourId': tourId,
-      'guideId': guideId,
-      'tourTitle': tourTitle,
-      'bookingDate': Timestamp.fromDate(bookingDate),
-      'tourDate': Timestamp.fromDate(tourDate),
-      'numberOfPeople': numberOfPeople,
-      'totalPrice': totalPrice,
-      'status': status.name,
-      'guideMessage': guideMessage,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'tourInstanceId': tourInstanceId,
+      'tourPlanId': tourPlanId,
+      'travelerId': travelerId,
+      'bookedAt': bookedAt,
+      'status': status,
+      'startTime': startTime,
     };
   }
 
   Booking copyWith({
-    BookingStatus? status,
-    String? guideMessage,
+    String? id,
+    String? tourInstanceId,
+    String? tourPlanId,
+    String? travelerId,
+    Timestamp? bookedAt,
+    String? status,
+    Timestamp? startTime,
   }) {
     return Booking(
-      id: id,
-      userId: userId,
-      tourId: tourId,
-      guideId: guideId,
-      tourTitle: tourTitle,
-      bookingDate: bookingDate,
-      tourDate: tourDate,
-      numberOfPeople: numberOfPeople,
-      totalPrice: totalPrice,
+      id: id ?? this.id,
+      tourInstanceId: tourInstanceId ?? this.tourInstanceId,
+      tourPlanId: tourPlanId ?? this.tourPlanId,
+      travelerId: travelerId ?? this.travelerId,
+      bookedAt: bookedAt ?? this.bookedAt,
       status: status ?? this.status,
-      guideMessage: guideMessage ?? this.guideMessage,
-      createdAt: createdAt,
+      startTime: startTime ?? this.startTime,
     );
   }
 
   @override
-  List<Object?> get props => [
-    id, userId, tourId, guideId, tourTitle, bookingDate, tourDate, 
-    numberOfPeople, totalPrice, status, guideMessage, createdAt
-  ];
-}
+  String toString() {
+    return 'Booking(id: $id, status: $status, travelerId: $travelerId, tourPlanId: $tourPlanId, startTime: $startTime)';
+  }
 
-/// Simple booking status enum
-enum BookingStatus {
-  pending('Pending', '⏳'),
-  confirmed('Confirmed', '✅'),
-  cancelled('Cancelled', '❌'),
-  completed('Completed', '🎯');
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Booking && other.id == id;
+  }
 
-  const BookingStatus(this.displayName, this.emoji);
-  
-  final String displayName;
-  final String emoji;
+  @override
+  int get hashCode => id.hashCode;
 }

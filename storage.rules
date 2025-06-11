@@ -1,32 +1,136 @@
 rules_version = '2';
 
-// Firebase Storage Rules for TourPal App
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow authenticated users to upload/read their profile images
-    match /users/{userId}/profile/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    
+    // Helper functions as specified in STORAGE.md
+    function isAuthenticated() {
+      return request.auth != null;
     }
     
-    // Allow authenticated users to upload/read tour images
-    match /tours/{tourId}/{fileName} {
-      allow read: if true; // Anyone can view tour images
-      allow write: if request.auth != null; // Only authenticated users can upload
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
     
-    // Allow authenticated users to upload/read general images
-    match /images/{userId}/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    function isValidImageType() {
+      return request.resource.contentType.matches('image/.*');
     }
     
-    // Public read access for app assets
-    match /public/{fileName} {
-      allow read: if true;
+    function isValidImageSize() {
+      return request.resource.size < 10 * 1024 * 1024; // 10MB
     }
     
-    // Temporary uploads (clean up after 24 hours)
-    match /temp/{fileName} {
-      allow read, write: if request.auth != null;
+    function isValidDocumentType() {
+      return request.resource.contentType in ['application/pdf', 'image/jpeg', 'image/png'];
+    }
+    
+    function isValidDocumentSize() {
+      return request.resource.size < 5 * 1024 * 1024; // 5MB
+    }
+    
+    function isValidDocument() {
+      return isValidDocumentType() && isValidDocumentSize();
+    }
+    
+    // User profile images - corrected path to match actual implementation
+    match /profile_images/{userImageFile} {
+      allow read, write: if isAuthenticated() && 
+                          userImageFile.split('.')[0] == request.auth.uid &&
+                          isValidImageType() && 
+                          isValidImageSize();
+    }
+    
+    // User documents (ID verification, certifications) - as specified in STORAGE.md
+    match /users/{userId}/documents/{document} {
+      allow read, write: if isAuthenticated() && 
+                          isOwner(userId) && 
+                          isValidDocument();
+    }
+    
+    // Place images - corrected to single image structure as per STORAGE.md
+    match /places/{placeId}/image.jpg {
+      allow read: if true; // Public read access
+      allow write: if isAuthenticated() && 
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Tour images - following STORAGE.md specification
+    match /tours/{tourId}/images/{imageId} {
+      allow read: if true; // Public read access for tour discovery
+      allow write: if isAuthenticated() && 
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Tour place images - exact paths used by StorageService in tour_creation_bloc.dart
+    match /tours/{tourId}/places/{placeFileName} {
+      allow read: if true; // Public read access for tour discovery
+      allow write: if isAuthenticated() && 
+                    placeFileName.matches('place_[0-9]+\\.jpg') &&
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Tour place images - for images within specific places of a tour
+    match /tours/{tourId}/places/{placeId}/images/{imageId} {
+      allow read: if true; // Public read access for tour discovery
+      allow write: if isAuthenticated() && 
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Tour place images - direct place images (used by image_upload_service.dart)
+    match /tours/{tourId}/places/{placeId}/{imageId} {
+      allow read: if true; // Public read access for tour discovery
+      allow write: if isAuthenticated() && 
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Tour cover images - exact path used by StorageService in tour_creation_bloc.dart
+    match /tours/{tourId}/cover.jpg {
+      allow read: if true; // Public read access for tour discovery
+      allow write: if isAuthenticated() && 
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Tour cover images - for tour cover/hero images (wildcard pattern)
+    match /tours/{tourId}/cover/{imageId} {
+      allow read: if true; // Public read access for tour discovery
+      allow write: if isAuthenticated() && 
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Tour cover images - covers directory (used by image_upload_service.dart)
+    match /tours/{tourId}/covers/{imageId} {
+      allow read: if true; // Public read access for tour discovery
+      allow write: if isAuthenticated() && 
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Journal photos - for tour journal entries
+    match /journal_entries/{entryId}/images/{imageId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && 
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Journal photos - for tour journal entries (actual path used in code)
+    match /journal_photos/{journalId}/{imageId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && 
+                    isValidImageType() && 
+                    isValidImageSize();
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

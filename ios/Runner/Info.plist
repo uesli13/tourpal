@@ -45,5 +45,31 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- Location permissions for real-time tracking during tours -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TourPal needs access to your location to track your position during tours and share it with your guide/traveler for safety and coordination.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>TourPal needs access to your location to track your position during tours and share it with your guide/traveler for safety and coordination.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>TourPal needs continuous location access to provide real-time tracking during tours even when the app is in the background.</string>
+	
+	<!-- Camera permissions for tour journal photos -->
+	<key>NSCameraUsageDescription</key>
+	<string>TourPal needs access to your camera to capture photos for your tour journal and share memorable moments.</string>
+	
+	<!-- Photo library permissions -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>TourPal needs access to your photo library to save and manage photos in your tour journal.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>TourPal needs permission to save photos from your tour journal to your photo library.</string>
+	
+	<!-- Microphone for voice notes -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>TourPal needs microphone access to record voice notes and audio memories for your tour journal.</string>
+	
+	<!-- Motion and fitness for walking detection -->
+	<key>NSMotionUsageDescription</key>
+	<string>TourPal uses motion data to detect when you're walking between tour stops and provide better navigation assistance.</string>
 </dict>
 </plist>

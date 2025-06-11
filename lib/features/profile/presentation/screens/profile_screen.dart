@@ -1,149 +1,170 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart';
-import 'package:tourpal/core/constants/app_constants.dart';
-import 'package:tourpal/features/profile/presentation/screens/edit_profile_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../auth/presentation/bloc/auth_bloc.dart';
-import '../../../auth/presentation/bloc/auth_event.dart';
-import '../../../auth/presentation/bloc/auth_state.dart';
-import 'package:tourpal/features/settings/presentation/screens/settings_screen.dart';
+import '../../../../core/constants/ui_constants.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_event.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
+import 'edit_profile_screen.dart';
 
-
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  void _initializeData() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      context.read<ProfileBloc>().add(LoadProfileEvent(user.uid));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context),
-      body: _buildBody(context),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: const Text(
-        'Profile',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: AppColors.textPrimary,
+      appBar: AppBar(
+        title: const Text(
+          'Profile',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
         ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () async {
+              final result = await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
+              if (result == true) {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  context.read<ProfileBloc>().add(LoadProfileEvent(user.uid));
+                }
+              }
+            },
+          ),
+        ],
       ),
-      backgroundColor: Colors.white,
-      elevation: 0,
-      actions: [
-        PopupMenuButton<String>(
-          onSelected: (value) => _handleMenuSelection(context, value),
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit, color: AppColors.textSecondary),
-                  SizedBox(width: 8),
-                  Text('Edit Profile'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'settings',
-              child: Row(
-                children: [
-                  Icon(Icons.settings, color: AppColors.textSecondary),
-                  SizedBox(width: 8),
-                  Text('Settings'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'logout',
-              child: Row(
-                children: [
-                  Icon(Icons.logout, color: AppColors.error),
-                  SizedBox(width: 8),
-                  Text('Logout'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
+      body: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, authState) {
+          if (authState is! AuthAuthenticated) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return BlocBuilder<ProfileBloc, ProfileState>(
+            builder: (context, state) {
+              if (state is ProfileLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              if (state is ProfileError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Error loading profile: ${state.message}',
+                        style: const TextStyle(color: AppColors.error),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user != null) {
+                            context.read<ProfileBloc>().add(LoadProfileEvent(user.uid));
+                          }
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              
+              final user = authState.user;
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    // Profile Avatar with camera icon
+                    _buildProfileAvatar(user.name, user.profileImageUrl),
+                    const SizedBox(height: 20),
+                    // User Info
+                    _buildUserInfo(user.name, user.email),
+                    if (user.bio != null && user.bio!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        user.bio!,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Mode Toggle - The main feature for switching between traveler and guide modes
+                    _buildGuideModeToggle(context, user.isGuide),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Quick Actions
+                    _buildQuickActions(context),
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Logout Button
+                    _buildActionButton(
+                      'Logout', 
+                      Icons.logout, 
+                      () => _handleLogout(context),
+                      isDestructive: true,
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    return BlocConsumer<ProfileBloc, ProfileState>(
-      listener: (context, profileState) {
-        // Handle profile update success to refresh auth state
-        if (profileState is ProfileUpdateSuccess) {
-          // Trigger auth state refresh to update cached user data
-          context.read<AuthBloc>().add(const CheckAuthStatusEvent());
-        }
-      },
-      builder: (context, profileState) {
-        return BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, authState) {
-            if (authState is! AuthAuthenticated) {
-              return const Center(child: Text('Please log in to view profile'));
-            }
-            
-            // Use updated user data from ProfileBloc if available, otherwise fallback to AuthBloc
-            final user = profileState is ProfileUpdateSuccess 
-                ? profileState.user 
-                : authState.user;
-            
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(UIConstants.defaultPadding),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  
-                  // Profile Avatar
-                  _buildProfileAvatar(user.profileImageUrl, user.name),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // User Info
-                  _buildUserInfo(user.name, user.email),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Guide Mode Toggle
-                  _buildGuideModeToggle(context, user.isGuide),
-                  
-                  const SizedBox(height: 40),
-                  
-                  // Stats Cards
-                  _buildStatsCards(),
-                  
-                  const SizedBox(height: 30),
-                  
-                  // Action Buttons
-                  _buildActionButtons(context),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildProfileAvatar(String? imageUrl, String? name) {
+  Widget _buildProfileAvatar(String? name, String? profileImageUrl) {
     return Stack(
       children: [
         CircleAvatar(
           radius: 60,
           backgroundColor: AppColors.primary,
-          backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
-          child: imageUrl == null
+          backgroundImage: profileImageUrl != null 
+              ? NetworkImage(profileImageUrl) 
+              : null,
+          child: profileImageUrl == null 
               ? Text(
-                  name?.isNotEmpty == true ? name![0].toUpperCase() : 'U',
+                  name != null && name.isNotEmpty ? name[0].toUpperCase() : 'U',
                   style: const TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
@@ -198,10 +219,10 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildGuideModeToggle(BuildContext context, bool isGuide) {
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, profileState) {
-        final isUpdating = profileState is ProfileLoading;
+        final isUpdating = profileState is ProfileUpdating;
         
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(UIConstants.defaultBorderRadius),
@@ -213,50 +234,81 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
+          child: Column(
             children: [
-              Icon(
-                isGuide ? Icons.tour : Icons.person,
-                color: isGuide ? Colors.orange : AppColors.primary,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isGuide ? 'Guide Mode' : 'Traveler Mode',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+              Row(
+                children: [
+                  Icon(
+                    isGuide ? Icons.tour : Icons.explore,
+                    color: isGuide ? Colors.orange : AppColors.primary,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isGuide ? 'Guide Mode' : 'Traveler Mode',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          isGuide 
+                              ? 'Create tours and manage bookings'
+                              : 'Explore and book amazing tours',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      isGuide 
-                          ? 'You can manage tours and bookings'
-                          : 'Switch to guide mode to offer tours',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
+                  ),
+                  if (isUpdating)
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Switch(
+                      value: isGuide,
+                      onChanged: (newValue) => _toggleGuideMode(context, newValue),
+                      activeColor: Colors.orange,
+                      activeTrackColor: Colors.orange.withValues(alpha: 0.3),
                     ),
-                  ],
-                ),
+                ],
               ),
-              if (isUpdating)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                Switch(
-                  value: isGuide,
-                  onChanged: (newValue) => _toggleGuideMode(context, newValue),
-                  activeColor: Colors.orange,
-                ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildModeButton(
+                      context,
+                      'Traveler',
+                      'Explore tours',
+                      Icons.explore,
+                      !isGuide,
+                      () => _toggleGuideMode(context, false),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildModeButton(
+                      context,
+                      'Guide',
+                      'Create tours',
+                      Icons.tour,
+                      isGuide,
+                      () => _toggleGuideMode(context, true),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         );
@@ -264,111 +316,79 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsCards() {
-    return Row(
-      children: [
-        Expanded(child: _buildStatCard('Tour Plans', '0', Icons.map)),
-        const SizedBox(width: 16),
-        Expanded(child: _buildStatCard('Journal Entries', '0', Icons.book)),
-        const SizedBox(width: 16),
-        Expanded(child: _buildStatCard('Messages', '0', Icons.chat)),
-      ],
+  Widget _buildModeButton(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected 
+                ? (title == 'Guide' ? AppColors.warning : AppColors.primary)
+                : AppColors.gray300,
+            width: isSelected ? 2 : 1,
+          ),
+          color: isSelected 
+              ? (title == 'Guide' ? Colors.orange.withValues(alpha: 0.1) : AppColors.primary.withValues(alpha: 0.1))
+              : AppColors.gray50,
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected 
+                  ? (title == 'Guide' ? AppColors.warning : AppColors.primary)
+                  : AppColors.textSecondary,
+              size: 28,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isSelected 
+                    ? (title == 'Guide' ? AppColors.warning : AppColors.primary)
+                    : AppColors.gray700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildStatCard(String title, String count, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(UIConstants.defaultBorderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.primary, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            count,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildQuickActions(BuildContext context) {
     return Column(
       children: [
-        _buildActionButton(
-          'Edit Profile',
-          Icons.edit,
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const EditProfileScreen(),
-            ),
-          ),
-        ),
+        _buildActionButton('Settings', Icons.settings, () => _handleMenuAction(context, 'settings')),
         const SizedBox(height: 12),
-        _buildActionButton(
-          'Switch Account',
-          Icons.account_circle,
-          () => _handleSwitchAccount(context),
-        ),
+        _buildActionButton('Help & Support', Icons.help_outline, () => _handleMenuAction(context, 'help')),
         const SizedBox(height: 12),
-        _buildActionButton(
-          'Settings',
-          Icons.settings,
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SettingsScreen(),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildActionButton(
-          'Help & Support',
-          Icons.help,
-          () => _showComingSoon(context),
-        ),
-        const SizedBox(height: 20),
-        _buildActionButton(
-          'Logout',
-          Icons.logout,
-          () => _handleLogout(context),
-          isDestructive: true,
-        ),
+        _buildActionButton('Privacy Policy', Icons.privacy_tip_outlined, () => _handleMenuAction(context, 'privacy')),
       ],
     );
   }
 
-  Widget _buildActionButton(
-    String title,
-    IconData icon,
-    VoidCallback onTap, {
-    bool isDestructive = false,
-  }) {
+  Widget _buildActionButton(String title, IconData icon, VoidCallback onTap, {bool isDestructive = false}) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -404,23 +424,26 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _handleMenuSelection(BuildContext context, String value) {
-    switch (value) {
-      case 'edit':
-        _showComingSoon(context);
-        break;
+  void _handleMenuAction(BuildContext context, String action) {
+    switch (action) {
       case 'settings':
-        _showComingSoon(context);
+        _showComingSoon(context, 'Settings');
         break;
-      case 'logout':
-        _handleLogout(context);
+      case 'help':
+        _showComingSoon(context, 'Help & Support');
+        break;
+      case 'privacy':
+        _showComingSoon(context, 'Privacy Policy');
         break;
     }
   }
 
-  void _showComingSoon(BuildContext context) {
+  void _showComingSoon(BuildContext context, String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Coming Soon!')),
+      SnackBar(
+        content: Text('$feature coming soon!'),
+        backgroundColor: AppColors.primary,
+      ),
     );
   }
 
@@ -451,57 +474,28 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  void _handleSwitchAccount(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Switch Account'),
-        content: const Text('This will sign you out and let you choose a different account. Continue?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Switch Account',
-              style: TextStyle(color: AppColors.primary),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && context.mounted) {
-      context.read<AuthBloc>().add(const SwitchGoogleAccountEvent());
-    }
-  }
-
   void _toggleGuideMode(BuildContext context, bool newValue) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(newValue ? 'Become a Guide' : 'Switch to Traveler'),
+        title: Text(newValue ? 'Switch to Guide Mode' : 'Switch to Traveler Mode'),
         content: Text(
           newValue 
-              ? 'As a guide, you\'ll be able to create and manage tours, handle bookings, and earn money from your expertise. Continue?'
-              : 'Switching back to traveler mode will hide guide features. You can always switch back later. Continue?'
+              ? '🎯 As a guide, you\'ll be able to:\n\n• Create and manage tours\n• Handle bookings and requests\n• Earn money from your expertise\n• Access guide dashboard and tools\n\nSwitch to Guide Mode?'
+              : '🌍 As a traveler, you\'ll be able to:\n\n• Explore and discover tours\n• Book amazing experiences\n• Save favorite tours\n\nSwitch to Traveler Mode?'
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              newValue ? 'Become Guide' : 'Switch Mode',
-              style: TextStyle(
-                color: newValue ? Colors.orange : AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: newValue ? Colors.orange : AppColors.primary,
+              foregroundColor: Colors.white,
             ),
+            child: Text(newValue ? 'Become Guide' : 'Switch Mode'),
           ),
         ],
       ),
@@ -512,15 +506,21 @@ class ProfileScreen extends StatelessWidget {
         UpdateProfileRoleEvent(isGuide: newValue),
       );
       
-      // Show success message
+      // Show success message with instructions
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             newValue 
-                ? '🎉 Welcome to Guide Mode! You can now manage tours in the dashboard.'
-                : '✅ Switched to Traveler Mode. Guide features are now hidden.'
+                ? '🎉 Welcome to Guide Mode! Check the bottom navigation to access your Guide Hub and create tours.'
+                : '✅ Switched to Traveler Mode. Explore the dashboard to discover amazing tours!'
           ),
           backgroundColor: newValue ? Colors.orange : AppColors.primary,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Got it',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
         ),
       );
     }

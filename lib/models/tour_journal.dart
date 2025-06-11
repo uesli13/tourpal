@@ -1,75 +1,93 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:equatable/equatable.dart';
+
 import 'journal_entry.dart';
 
-class TourJournal extends Equatable {
+class TourJournal {
   final String id;
-  final String userId;
+  final String sessionId;
   final String tourPlanId;
+  final String guideId;
+  final String travelerId;
   final List<JournalEntry> entries;
-  final DateTime startedAt;
-  final DateTime? completedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final bool isCompleted;
+  final Map<String, dynamic> metadata;
 
-  const TourJournal({
+  // Additional properties for UI compatibility
+  String get title => metadata['title'] as String? ?? 'Tour Journal';
+  DateTime? get completedAt => isCompleted ? updatedAt : null;
+
+  TourJournal({
     required this.id,
-    required this.userId,
+    required this.sessionId,
     required this.tourPlanId,
-    required this.entries,
-    required this.startedAt,
-    this.completedAt,
+    required this.guideId,
+    required this.travelerId,
+    this.entries = const [],
+    required this.createdAt,
+    required this.updatedAt,
+    this.isCompleted = false,
+    this.metadata = const {},
   });
 
   factory TourJournal.fromMap(Map<String, dynamic> map, String id) {
     return TourJournal(
       id: id,
-      userId: map['userId'] ?? '',
+      sessionId: map['sessionId'] ?? '',
       tourPlanId: map['tourPlanId'] ?? '',
+      guideId: map['guideId'] ?? '',
+      travelerId: map['travelerId'] ?? '',
       entries: (map['entries'] as List<dynamic>?)
-              ?.map((entry) => JournalEntry.fromMap(entry))
-              .toList() ??
-          [],
-      startedAt: (map['startedAt'] as Timestamp).toDate(),
-      completedAt: map['completedAt'] != null
-          ? (map['completedAt'] as Timestamp).toDate()
-          : null,
+          ?.map((entry) => JournalEntry.fromMap(entry as Map<String, dynamic>, entry['id'] ?? ''))
+          .toList() ?? [],
+      createdAt: map['createdAt'] is Timestamp
+          ? (map['createdAt'] as Timestamp).toDate()
+          : DateTime.parse(map['createdAt'] ?? DateTime.now().toIso8601String()),
+      updatedAt: map['updatedAt'] is Timestamp
+          ? (map['updatedAt'] as Timestamp).toDate()
+          : DateTime.parse(map['updatedAt'] ?? DateTime.now().toIso8601String()),
+      isCompleted: map['isCompleted'] ?? false,
+      metadata: Map<String, dynamic>.from(map['metadata'] ?? {}),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'userId': userId,
+      'sessionId': sessionId,
       'tourPlanId': tourPlanId,
+      'guideId': guideId,
+      'travelerId': travelerId,
       'entries': entries.map((entry) => entry.toMap()).toList(),
-      'startedAt': Timestamp.fromDate(startedAt),
-      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+      'isCompleted': isCompleted,
+      'metadata': metadata,
     };
   }
 
   TourJournal copyWith({
-    String? id,
-    String? userId,
+    String? sessionId,
     String? tourPlanId,
+    String? guideId,
+    String? travelerId,
     List<JournalEntry>? entries,
-    DateTime? startedAt,
-    DateTime? completedAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isCompleted,
+    Map<String, dynamic>? metadata,
   }) {
     return TourJournal(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
+      id: id,
+      sessionId: sessionId ?? this.sessionId,
       tourPlanId: tourPlanId ?? this.tourPlanId,
+      guideId: guideId ?? this.guideId,
+      travelerId: travelerId ?? this.travelerId,
       entries: entries ?? this.entries,
-      startedAt: startedAt ?? this.startedAt,
-      completedAt: completedAt ?? this.completedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isCompleted: isCompleted ?? this.isCompleted,
+      metadata: metadata ?? this.metadata,
     );
   }
-
-  @override
-  List<Object?> get props => [
-        id,
-        userId,
-        tourPlanId,
-        entries,
-        startedAt,
-        completedAt,
-      ];
 }

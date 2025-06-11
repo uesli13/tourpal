@@ -1,70 +1,55 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:equatable/equatable.dart';
 
-class JournalEntry extends Equatable {
+class JournalEntry {
   final String id;
   final String placeId;
-  final String note;
-  final List<String> photos;
-  final GeoPoint location;
-  final DateTime createdAt;
+  final String type; // 'check_in', 'note', 'photo'
+  final String content;
+  final List<String> imageUrls;
+  final DateTime timestamp;
+  final Map<String, dynamic> metadata;
 
-  const JournalEntry({
+  JournalEntry({
     required this.id,
     required this.placeId,
-    required this.note,
-    required this.photos,
-    required this.location,
-    required this.createdAt,
+    required this.type,
+    required this.content,
+    this.imageUrls = const [],
+    required this.timestamp,
+    this.metadata = const {},
   });
 
-  factory JournalEntry.fromMap(Map<String, dynamic> map) {
+  // Add compatibility getters for existing code
+  String get note => content;
+  List<String> get photos => imageUrls;
+
+  factory JournalEntry.fromMap(Map<String, dynamic> map, String id) {
     return JournalEntry(
-      id: map['id'] ?? '',
+      id: id,
       placeId: map['placeId'] ?? '',
-      note: map['note'] ?? '',
-      photos: List<String>.from(map['photos'] ?? []),
-      location: map['location'] ?? const GeoPoint(0, 0),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      type: map['type'] ?? 'note',
+      content: map['content'] ?? '',
+      imageUrls: List<String>.from(map['imageUrls'] ?? []),
+      timestamp: map['timestamp'] is Timestamp
+          ? (map['timestamp'] as Timestamp).toDate()
+          : map['timestamp'] is DateTime
+          ? map['timestamp']
+          : DateTime.parse(map['timestamp'] ?? DateTime.now().toIso8601String()),
+      metadata: Map<String, dynamic>.from(map['metadata'] ?? {}),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'placeId': placeId,
-      'note': note,
-      'photos': photos,
-      'location': location,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'type': type,
+      'content': content,
+      'imageUrls': imageUrls,
+      'timestamp': Timestamp.fromDate(timestamp),
+      'metadata': metadata,
     };
   }
-
-  JournalEntry copyWith({
-    String? id,
-    String? placeId,
-    String? note,
-    List<String>? photos,
-    GeoPoint? location,
-    DateTime? createdAt,
-  }) {
-    return JournalEntry(
-      id: id ?? this.id,
-      placeId: placeId ?? this.placeId,
-      note: note ?? this.note,
-      photos: photos ?? this.photos,
-      location: location ?? this.location,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
-
-  @override
-  List<Object> get props => [
-        id,
-        placeId,
-        note,
-        photos,
-        location,
-        createdAt,
-      ];
 }
+
+// Create an alias for compatibility with TourJournal
+typedef IndividualJournalEntry = JournalEntry;

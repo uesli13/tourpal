@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +7,14 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+
 android {
-    namespace = "com.example.tourpal"
+    namespace = "com.tourpal"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
@@ -25,6 +33,19 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Load Google Maps API Key from environment variable or local.properties
+        val googleMapsApiKey = System.getenv("GOOGLE_MAPS_API_KEY") 
+            ?: localProperties.getProperty("GOOGLE_MAPS_API_KEY")
+            ?: "GOOGLE_MAPS_API_KEY_NOT_SET"
+            
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
+        
+        // Log warning if API key is not properly set
+        if (googleMapsApiKey == "GOOGLE_MAPS_API_KEY_NOT_SET") {
+            println("WARNING: GOOGLE_MAPS_API_KEY not found!")
+            println("Set it in local.properties or as environment variable")
+        }
     }
 
     buildTypes {

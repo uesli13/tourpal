@@ -1,26 +1,19 @@
 import 'package:equatable/equatable.dart';
 import 'dart:io';
-import 'package:tourpal/models/user.dart';
 
-// Events
 abstract class ProfileEvent extends Equatable {
   const ProfileEvent();
   @override
   List<Object?> get props => [];
 }
 
-class LoadProfile extends ProfileEvent {
+class LoadProfileEvent extends ProfileEvent {
   final String userId;
-  const LoadProfile(this.userId);
+  
+  const LoadProfileEvent(this.userId);
+  
   @override
   List<Object> get props => [userId];
-}
-
-class UpdateProfile extends ProfileEvent {
-  final User user;
-  const UpdateProfile(this.user);
-  @override
-  List<Object> get props => [user];
 }
 
 class UpdateProfileEvent extends ProfileEvent {
@@ -42,6 +35,37 @@ class UpdateProfileEvent extends ProfileEvent {
   
   @override
   List<Object?> get props => [name, bio, profileImagePath, profileImage, removeProfileImage, birthdate];
+}
+
+class UpdateProfileRoleEvent extends ProfileEvent {
+  final bool isGuide;
+  
+  const UpdateProfileRoleEvent({required this.isGuide});
+  
+  @override
+  List<Object> get props => [isGuide];
+}
+
+class UploadProfileImageEvent extends ProfileEvent {
+  final String userId;
+  final String imagePath;
+  
+  const UploadProfileImageEvent({
+    required this.userId,
+    required this.imagePath,
+  });
+  
+  @override
+  List<Object> get props => [userId, imagePath];
+}
+
+class DeleteProfileImageEvent extends ProfileEvent {
+  final String userId;
+  
+  const DeleteProfileImageEvent(this.userId);
+  
+  @override
+  List<Object> get props => [userId];
 }
 
 class UpdateEmailEvent extends ProfileEvent {
@@ -74,13 +98,8 @@ class ClearErrorEvent extends ProfileEvent {
   const ClearErrorEvent();
 }
 
-class UpdateProfileRoleEvent extends ProfileEvent {
-  final bool isGuide;
-  
-  const UpdateProfileRoleEvent({required this.isGuide});
-  
-  @override
-  List<Object> get props => [isGuide];
+class ClearProfileErrorEvent extends ProfileEvent {
+  const ClearProfileErrorEvent();
 }
 
 class AddTourToFavorites extends ProfileEvent {
@@ -98,4 +117,3 @@ class RemoveTourFromFavorites extends ProfileEvent {
   @override
   List<Object> get props => [userId, tourId];
 }
-

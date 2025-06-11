@@ -1,9 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../models/user.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -21,24 +20,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _bioController = TextEditingController();
   File? _profileImage;
   bool _removeProfileImage = false;
-  bool _controllersInitialized = false;
+  String? _currentImageUrl;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeData();
-    });
+    _loadInitialData();
   }
 
-  void _initializeData() {
-    final profileBloc = context.read<ProfileBloc>();
-    final state = profileBloc.state;
-    
-    if (state is ProfileLoaded) {
-      final user = state.user;
+  void _loadInitialData() {
+    final currentState = context.read<ProfileBloc>().state;
+    if (currentState is ProfileLoaded) {
+      final user = currentState.user;
       _nameController.text = user.name;
       _bioController.text = user.bio ?? '';
+      _currentImageUrl = user.profileImageUrl;
     }
   }
 
@@ -59,36 +55,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
-          if (state is ProfileError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.error)),
-            );
-            context.read<ProfileBloc>().add(const ClearErrorEvent());
-          }
           if (state is ProfileUpdateSuccess) {
-            Navigator.of(context).pop();
+            // Profile updated successfully
+            Navigator.of(context).pop(true); // Return true to indicate success
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile updated successfully!')),
+              const SnackBar(
+                content: Text('Profile updated successfully!'),
+                backgroundColor: Colors.green,
+              ),
             );
+          } else if (state is ProfileError) {
+            _showSnackBar('❌ Error updating profile: ${state.message}');
           }
         },
         builder: (context, state) {
-          if (state is ProfileLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          User? user;
-          if (state is ProfileLoaded) {
-            user = state.user;
-          }
+          final isLoading = state is ProfileLoading;
           
-          // Initialize controllers with current user data if available
-          if (user != null && !_controllersInitialized) {
-            _nameController.text = user.name;
-            _bioController.text = user.bio ?? '';
-            _controllersInitialized = true;
-          }
-
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Form(
@@ -103,10 +85,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           radius: 60,
                           backgroundImage: _profileImage != null
                               ? FileImage(_profileImage!)
-                              : (user?.profileImageUrl != null
-                                  ? NetworkImage(user!.profileImageUrl!)
+                              : (_currentImageUrl != null && !_removeProfileImage
+                                  ? NetworkImage(_currentImageUrl!)
                                   : null) as ImageProvider?,
-                          child: _profileImage == null && user?.profileImageUrl == null
+                          child: _profileImage == null &&
+                                  (_currentImageUrl == null || _removeProfileImage)
                               ? const Icon(Icons.person, size: 60)
                               : null,
                         ),
@@ -120,7 +103,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                             child: IconButton(
                               icon: const Icon(Icons.camera_alt, color: Colors.white),
-                              onPressed: _showImagePicker,
+                              onPressed: isLoading ? null : _showImagePicker,
                             ),
                           ),
                         ),
@@ -132,6 +115,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   // Name Field
                   TextFormField(
                     controller: _nameController,
+                    enabled: !isLoading,
                     decoration: InputDecoration(
                       labelText: 'Display Name',
                       prefixIcon: const Icon(Icons.person),
@@ -153,6 +137,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   // Bio Field
                   TextFormField(
                     controller: _bioController,
+                    enabled: !isLoading,
                     decoration: InputDecoration(
                       labelText: 'Bio',
                       prefixIcon: const Icon(Icons.info),
@@ -170,7 +155,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: state is ProfileLoading ? null : _saveProfile,
+                      onPressed: isLoading ? null : _saveProfile,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
@@ -179,7 +164,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: state is ProfileLoading
+                      child: isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
@@ -204,13 +189,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showImagePicker() {
-    final state = context.read<ProfileBloc>().state;
-    User? user;
-    if (state is ProfileLoaded) {
-      user = state.user;
-    }
-    final hasCurrentImage = user?.profileImageUrl != null && !_removeProfileImage;
-    
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -221,49 +199,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // HANDLE
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // TITLE
             const Text(
               'Change Profile Photo',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            
             const SizedBox(height: 20),
-            
-            // OPTIONS
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // CAMERA
                 _buildImageOption(
                   icon: Icons.camera_alt,
                   label: 'Camera',
                   onTap: () => _pickImage(ImageSource.camera),
                 ),
-                
-                // GALLERY
                 _buildImageOption(
                   icon: Icons.photo_library,
                   label: 'Gallery',
                   onTap: () => _pickImage(ImageSource.gallery),
                 ),
-                
-                // REMOVE (only show if there's an image)
-                if (hasCurrentImage || _profileImage != null)
+                if (_currentImageUrl != null || _profileImage != null)
                   _buildImageOption(
                     icon: Icons.delete,
                     label: 'Remove',
@@ -272,7 +226,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
               ],
             ),
-            
             const SizedBox(height: 20),
           ],
         ),
@@ -286,38 +239,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required VoidCallback onTap,
     Color? color,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: (color ?? AppColors.primary).withValues(alpha: .1),
-              shape: BoxShape.circle,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: (color ?? AppColors.primary).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: color ?? AppColors.primary,
+                size: 24,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: color ?? AppColors.primary,
-              size: 30,
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: color ?? AppColors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    Navigator.pop(context); // Close bottom sheet
+    Navigator.pop(context);
     
     try {
       final pickedFile = await ImagePicker().pickImage(
@@ -330,17 +287,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (pickedFile != null) {
         setState(() {
           _profileImage = File(pickedFile.path);
-          _removeProfileImage = false; // Reset remove flag
+          _removeProfileImage = false;
         });
         _showSnackBar('📸 Profile photo selected!');
       }
     } catch (e) {
-      _showSnackBar('❌ Error picking image: ${e.toString()}');
+      _showSnackBar('❌ Error picking image: $e');
     }
   }
 
   void _removeImage() {
-    Navigator.pop(context); // Close bottom sheet
+    Navigator.pop(context);
     setState(() {
       _profileImage = null;
       _removeProfileImage = true;
@@ -351,15 +308,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _saveProfile() {
     if (!_formKey.currentState!.validate()) return;
     
-    final name = _nameController.text.trim();
-    final bio = _bioController.text.trim();
-
-    context.read<ProfileBloc>().add(UpdateProfileEvent(
-      name: name.isEmpty ? null : name,
-      bio: bio.isEmpty ? null : bio,
-      profileImage: _profileImage,
-      removeProfileImage: _removeProfileImage,
-    ));
+    // Use ProfileBloc to update profile
+    context.read<ProfileBloc>().add(
+      UpdateProfileEvent(
+        name: _nameController.text.trim(),
+        bio: _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
+        profileImage: _profileImage,
+        removeProfileImage: _removeProfileImage,
+      ),
+    );
   }
 
   void _showSnackBar(String message) {

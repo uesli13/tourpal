@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
-import '../../data/models/tour_request.dart';
+import 'package:tourpal/models/tour_plan.dart';
 
-/// Base class for all tour events
 abstract class TourEvent extends Equatable {
   const TourEvent();
 
@@ -9,105 +8,81 @@ abstract class TourEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Event to create a new tour
-class CreateTourEvent extends TourEvent {
-  final TourCreateRequest request;
-
-  const CreateTourEvent({required this.request});
-
-  @override
-  List<Object> get props => [request];
-
-  @override
-  String toString() => 'CreateTourEvent(request: $request)';
-}
-
-/// Event to save a tour as draft
-class SaveAsDraftTourEvent extends TourEvent {
-  final TourCreateRequest request;
-
-  const SaveAsDraftTourEvent({required this.request});
-
-  @override
-  List<Object> get props => [request];
-
-  @override
-  String toString() => 'SaveAsDraftTourEvent(request: $request)';
-}
-
-/// Event to publish a tour
-class PublishTourEvent extends TourEvent {
-  final TourCreateRequest request;
-
-  const PublishTourEvent({required this.request});
-
-  @override
-  List<Object> get props => [request];
-
-  @override
-  String toString() => 'PublishTourEvent(request: $request)';
-}
-
-/// Event to load tours
 class LoadToursEvent extends TourEvent {
-  const LoadToursEvent();
-
+  final String? guideId;
+  final TourStatus? status;
+  
+  const LoadToursEvent({this.guideId, this.status});
+  
   @override
-  String toString() => 'LoadToursEvent()';
+  List<Object?> get props => [guideId, status];
 }
 
-/// Event to load a specific tour by ID
-class LoadTourByIdEvent extends TourEvent {
+class LoadToursByGuideEvent extends TourEvent {
+  final String guideId;
+  
+  const LoadToursByGuideEvent(this.guideId);
+  
+  @override
+  List<Object?> get props => [guideId];
+}
+
+class LoadAllPublishedToursEvent extends TourEvent {
+  const LoadAllPublishedToursEvent();
+}
+
+class LoadTourDetailsEvent extends TourEvent {
   final String tourId;
-
-  const LoadTourByIdEvent({required this.tourId});
-
+  
+  const LoadTourDetailsEvent(this.tourId);
+  
   @override
-  List<Object> get props => [tourId];
-
-  @override
-  String toString() => 'LoadTourByIdEvent(tourId: $tourId)';
+  List<Object?> get props => [tourId];
 }
 
-/// Event to update an existing tour
+class UpdateTourStatusEvent extends TourEvent {
+  final String tourId;
+  final TourStatus status;
+  
+  const UpdateTourStatusEvent(this.tourId, this.status);
+  
+  @override
+  List<Object?> get props => [tourId, status];
+}
+ 
 class UpdateTourEvent extends TourEvent {
-  final String tourId;
-  final TourUpdateRequest request;
-
-  const UpdateTourEvent({
-    required this.tourId,
-    required this.request,
-  });
-
+  final TourPlan tour;
+  
+  const UpdateTourEvent(this.tour);
+  
   @override
-  List<Object> get props => [tourId, request];
-
-  @override
-  String toString() => 'UpdateTourEvent(tourId: $tourId, request: $request)';
+  List<Object?> get props => [tour];
 }
 
-/// Event to delete a tour
 class DeleteTourEvent extends TourEvent {
   final String tourId;
-
-  const DeleteTourEvent({required this.tourId});
-
+  
+  const DeleteTourEvent(this.tourId);
+  
   @override
-  List<Object> get props => [tourId];
-
-  @override
-  String toString() => 'DeleteTourEvent(tourId: $tourId)';
+  List<Object?> get props => [tourId];
 }
 
-/// Event to search tours by address
-class SearchToursEvent extends TourEvent {
-  final String searchQuery;
-
-  const SearchToursEvent({required this.searchQuery});
-
+class RefreshToursEvent extends TourEvent {
+  final String? guideId;
+  
+  const RefreshToursEvent({this.guideId});
+  
   @override
-  List<Object> get props => [searchQuery];
+  List<Object?> get props => [guideId];
+}
 
+class FilterToursEvent extends TourEvent {
+  final TourStatus? status;
+  final String? searchQuery;
+  
+  const FilterToursEvent({this.status, this.searchQuery});
+  
   @override
-  String toString() => 'SearchToursEvent(searchQuery: $searchQuery)';
+  List<Object?> get props => [status, searchQuery];
 }

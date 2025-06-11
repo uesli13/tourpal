@@ -1,6 +1,8 @@
+// UI-only version of the login screen, stripped of BLoC and navigation logic
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:tourpal/core/constants/app_constants.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/ui_constants.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -8,11 +10,10 @@ import '../widgets/auth_text_field.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/google_sign_in_button.dart';
 import 'signup_screen.dart';
-import 'forgot_password_screen.dart';
-import '../../../../core/constants/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onLogin;
+  const LoginScreen({super.key, this.onLogin});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -35,49 +36,41 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(UIConstants.defaultPadding),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 60),
-                
-                // Logo and Title
-                _buildHeader(),
-                
-                const SizedBox(height: 48),
-                
-                // Login Form
-                _buildLoginForm(),
-                
-                const SizedBox(height: 24),
-                
-                // Forgot Password
-                _buildForgotPasswordLink(),
-                
-                const SizedBox(height: 32),
-                
-                // Divider
-                _buildDivider(),
-                
-                const SizedBox(height: 32),
-                
-                // Google Sign In
-                _buildGoogleSignIn(),
-                
-                const SizedBox(height: 32),
-                
-                // Sign Up Link
-                _buildSignUpLink(),
-                
-                const SizedBox(height: 24),
-                
-                // Error Display
-                _buildErrorDisplay(),
-              ],
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+          }
+        },
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(UIConstants.defaultPadding),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 60),
+                  _buildHeader(),
+                  const SizedBox(height: 48),
+                  BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, state) => _buildLoginForm(context, state),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildForgotPasswordLink(context),
+                  const SizedBox(height: 32),
+                  _buildDivider(),
+                  const SizedBox(height: 32),
+                  BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, state) => _buildGoogleSignIn(context, state),
+                  ),
+                  const SizedBox(height: 32),
+                  _buildSignUpLink(),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ),
@@ -101,20 +94,16 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Colors.white,
           ),
         ),
-        
         const SizedBox(height: 16),
-        
         Text(
-          'Welcome to ${AppInfo.name}',
+          'Welcome to TourPal',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
           ),
           textAlign: TextAlign.center,
         ),
-        
         const SizedBox(height: 8),
-        
         Text(
           'Sign in to continue your journey',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -126,7 +115,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildLoginForm(BuildContext context, AuthState state) {
+    final isLoading = state is AuthLoading;
     return Column(
       children: [
         AuthTextField(
@@ -136,24 +126,28 @@ class _LoginScreenState extends State<LoginScreen> {
           keyboardType: TextInputType.emailAddress,
           prefixIcon: Icons.email_outlined,
           validator: (value) {
-            if (value?.isEmpty ?? true) {
-              return 'Please enter your email';
+            if (value == null || value.isEmpty) {
+              return 'Email is required';
             }
-            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
+            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
               return 'Please enter a valid email';
             }
             return null;
           },
         ),
-        
         const SizedBox(height: 16),
-        
         AuthTextField(
           controller: _passwordController,
           label: 'Password',
           hint: 'Enter your password',
           obscureText: _obscurePassword,
           prefixIcon: Icons.lock_outlined,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Password is required';
+            }
+            return null;
+          },
           suffixIcon: IconButton(
             icon: Icon(
               _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -165,38 +159,67 @@ class _LoginScreenState extends State<LoginScreen> {
               });
             },
           ),
-          validator: (value) {
-            if (value?.isEmpty ?? true) {
-              return 'Please enter your password';
-            }
-            return null;
-          },
         ),
-        
         const SizedBox(height: 24),
-        
-        BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, state) {
-            return AuthButton(
-              text: 'Sign In',
-              isLoading: state is AuthLoading,
-              onPressed: state is AuthLoading ? null : _handleSignIn,
-            );
-          },
+        AuthButton(
+          text: isLoading ? 'Signing In...' : 'Sign In',
+          isLoading: isLoading,
+          onPressed: isLoading
+              ? null
+              : () {
+                  if (_formKey.currentState?.validate() ?? false) {
+                    context.read<AuthBloc>().add(
+                      SignInWithEmailEvent(
+                        email: _emailController.text,
+                        password: _passwordController.text,
+                      ),
+                    );
+                  }
+                },
         ),
       ],
     );
   }
 
-  Widget _buildForgotPasswordLink() {
+  Widget _buildForgotPasswordLink(BuildContext context) {
     return Align(
       alignment: Alignment.centerRight,
       child: TextButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+        onPressed: () async {
+          final emailController = TextEditingController();
+          final result = await showDialog<String>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Reset Password'),
+              content: TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Enter your email',
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, emailController.text),
+                  child: const Text('Send'),
+                ),
+              ],
+            ),
           );
+          if (result != null && result.isNotEmpty && mounted) {
+            // Store context before async operation
+            final authBloc = context.read<AuthBloc>();
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+            
+            authBloc.add(SendPasswordResetEvent(email: result));
+            scaffoldMessenger.showSnackBar(
+              const SnackBar(content: Text('Password reset email sent!')),
+            );
+          }
         },
         child: const Text(
           'Forgot Password?',
@@ -225,16 +248,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildGoogleSignIn() {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        return GoogleSignInButton(
-          isLoading: state is AuthLoading,
-          onPressed: state is AuthLoading ? null : () {
-            context.read<AuthBloc>().add(const SignInWithGoogleEvent());
-          },
-        );
-      },
+  Widget _buildGoogleSignIn(BuildContext context, AuthState state) {
+    final isLoading = state is AuthLoading;
+    return GoogleSignInButton(
+      isLoading: isLoading,
+      onPressed: isLoading
+          ? null
+          : () {
+              context.read<AuthBloc>().add(SignInWithGoogleEvent());
+            },
     );
   }
 
@@ -245,8 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
         const Text('Don\'t have an account? '),
         TextButton(
           onPressed: () {
-            Navigator.push(
-              context,
+            Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const SignUpScreen()),
             );
           },
@@ -260,61 +281,5 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ],
     );
-  }
-
-  Widget _buildErrorDisplay() {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        if (state is! AuthError) {
-          return const SizedBox.shrink();
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.error.withValues(alpha: .1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.error.withValues(alpha: .3)),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.error_outline,
-                color: AppColors.error,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  state.message,
-                  style: const TextStyle(
-                    color: AppColors.error,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, size: 18),
-                onPressed: () {
-                  context.read<AuthBloc>().add(const ClearAuthErrorEvent());
-                },
-                color: AppColors.error,
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _handleSignIn() {
-    if (_formKey.currentState?.validate() ?? false) {
-      context.read<AuthBloc>().add(
-        SignInWithEmailEvent(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        ),
-      );
-    }
   }
 }

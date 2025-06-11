@@ -5,6 +5,20 @@
 build/
 flutter_export_environment.sh
 
+# Environment files - NEVER COMMIT THESE
+.env
+.env.*
+*.env
+.env.local
+.env.development
+.env.production
+.env.staging
+
+# API Keys and Secrets
+**/api_keys.dart
+**/secrets.dart
+google-services.json.backup
+
 # Android related
 android/.gradle/
 android/app/build/

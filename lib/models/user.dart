@@ -7,11 +7,14 @@ class User extends Equatable {
   final String name;
   final String? bio;
   final String? profileImageUrl;
-  final DateTime? birthdate;
+  final Timestamp createdAt;
+  final Timestamp? birthdate;
+  final List<String>? favoriteTours;
+  final List<String>? bookedTours;
+  final List<String>? completedTours;
   final bool isGuide;
-  final List<String> favoriteTours;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final bool isAvailable;
+  final List<String> languages;
 
   const User({
     required this.id,
@@ -19,27 +22,39 @@ class User extends Equatable {
     required this.name,
     this.bio,
     this.profileImageUrl,
-    this.birthdate,
-    required this.isGuide,
-    required this.favoriteTours,
     required this.createdAt,
-    required this.updatedAt,
+    this.birthdate,
+    this.favoriteTours,
+    this.bookedTours,
+    this.completedTours,
+    this.isGuide = false,
+    this.isAvailable = true,
+    this.languages = const [],
   });
 
-  factory User.fromMap(Map<String, dynamic> map, String id) {
+  factory User.fromMap(Map<String, dynamic> map, String documentId) {
     return User(
-      id: id,
+      id: documentId,
       email: map['email'] as String,
       name: map['name'] as String,
       bio: map['bio'] as String?,
       profileImageUrl: map['profileImageUrl'] as String?,
-      birthdate: map['birthdate'] != null 
-          ? (map['birthdate'] as Timestamp).toDate()
+      createdAt: map['createdAt'] as Timestamp,
+      birthdate: map['birthdate'] as Timestamp?,
+      favoriteTours: map['favoriteTours'] != null 
+          ? List<String>.from(map['favoriteTours'])
+          : null,
+      bookedTours: map['bookedTours'] != null 
+          ? List<String>.from(map['bookedTours'])
+          : null,
+      completedTours: map['completedTours'] != null 
+          ? List<String>.from(map['completedTours'])
           : null,
       isGuide: map['isGuide'] as bool? ?? false,
-      favoriteTours: List<String>.from(map['favoriteTours'] ?? []),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      isAvailable: map['isAvailable'] as bool? ?? true,
+      languages: map['languages'] != null 
+          ? List<String>.from(map['languages'])
+          : const [],
     );
   }
 
@@ -49,11 +64,14 @@ class User extends Equatable {
       'name': name,
       'bio': bio,
       'profileImageUrl': profileImageUrl,
-      'birthdate': birthdate != null ? Timestamp.fromDate(birthdate!) : null,
-      'isGuide': isGuide,
+      'createdAt': createdAt,
+      'birthdate': birthdate,
       'favoriteTours': favoriteTours,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'bookedTours': bookedTours,
+      'completedTours': completedTours,
+      'isGuide': isGuide,
+      'isAvailable': isAvailable,
+      'languages': languages,
     };
   }
 
@@ -62,10 +80,13 @@ class User extends Equatable {
     String? name,
     String? bio,
     String? profileImageUrl,
-    DateTime? birthdate,
-    bool? isGuide,
+    Timestamp? birthdate,
     List<String>? favoriteTours,
-    DateTime? updatedAt,
+    List<String>? bookedTours,
+    List<String>? completedTours,
+    bool? isGuide,
+    bool? isAvailable,
+    List<String>? languages,
   }) {
     return User(
       id: id,
@@ -73,32 +94,78 @@ class User extends Equatable {
       name: name ?? this.name,
       bio: bio ?? this.bio,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
-      birthdate: birthdate ?? this.birthdate,
-      isGuide: isGuide ?? this.isGuide,
-      favoriteTours: favoriteTours ?? this.favoriteTours,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      birthdate: birthdate ?? this.birthdate,
+      favoriteTours: favoriteTours ?? this.favoriteTours,
+      bookedTours: bookedTours ?? this.bookedTours,
+      completedTours: completedTours ?? this.completedTours,
+      isGuide: isGuide ?? this.isGuide,
+      isAvailable: isAvailable ?? this.isAvailable,
+      languages: languages ?? this.languages,
     );
   }
 
-  bool get hasCompletedProfile => bio != null && birthdate != null;
-
-  // BLoC-compatible property names
-  bool get needsProfileSetup => !hasCompletedProfile;
-  String? get profilePhoto => profileImageUrl;
+  // Helper methods for business logic
+  bool get hasCompletedProfile => 
+      bio != null && bio!.isNotEmpty && birthdate != null;
   
-  int get age {
-    if (birthdate == null) return 0;
+  String get displayName => name.isNotEmpty ? name : email.split('@').first;
+  
+  bool get hasProfileImage => 
+      profileImageUrl != null && profileImageUrl!.isNotEmpty;
+
+  DateTime? get birthdateAsDateTime => birthdate?.toDate();
+  
+  DateTime get createdAtAsDateTime => createdAt.toDate();
+  
+  int? get age {
+    if (birthdate == null) return null;
     final now = DateTime.now();
-    int age = now.year - birthdate!.year;
-    if (now.month < birthdate!.month || 
-        (now.month == birthdate!.month && now.day < birthdate!.day)) {
+    final birthDate = birthdate!.toDate();
+    int age = now.year - birthDate.year;
+    if (now.month < birthDate.month || 
+        (now.month == birthDate.month && now.day < birthDate.day)) {
       age--;
     }
     return age;
   }
 
-  String get displayName => name.isNotEmpty ? name : email.split('@').first;
+  // Safe getters for optional lists
+  List<String> get safenessFavoriteTours => favoriteTours ?? [];
+  List<String> get safenessBookedTours => bookedTours ?? [];
+  List<String> get safenessCompletedTours => completedTours ?? [];
+
+  // Validation helpers
+  List<String> get validationErrors {
+    final errors = <String>[];
+    
+    if (email.isEmpty || !email.contains('@')) {
+      errors.add('Please enter a valid email address');
+    }
+    
+    if (name.trim().length < 2) {
+      errors.add('Name must be at least 2 characters long');
+    }
+    
+    if (bio != null && bio!.trim().isNotEmpty && bio!.trim().length < 10) {
+      errors.add('Bio must be at least 10 characters long');
+    }
+    
+    // Only validate birthdate if provided
+    if (birthdate != null) {
+      final userAge = age;
+      if (userAge != null && userAge < 18) {
+        errors.add('You must be at least 18 years old');
+      }
+      if (userAge != null && userAge > 120) {
+        errors.add('Please enter a valid birthdate');
+      }
+    }
+    
+    return errors;
+  }
+  
+  bool get isValidForProfile => validationErrors.isEmpty;
 
   @override
   List<Object?> get props => [
@@ -107,15 +174,18 @@ class User extends Equatable {
     name,
     bio,
     profileImageUrl,
-    birthdate,
-    isGuide,
-    favoriteTours,
     createdAt,
-    updatedAt,
+    birthdate,
+    favoriteTours,
+    bookedTours,
+    completedTours,
+    isGuide,
+    isAvailable,
+    languages,
   ];
 
   @override
   String toString() {
-    return 'User{id: $id, email: $email, name: $name, isGuide: $isGuide}';
+    return 'User{id: $id, email: $email, name: $name, isGuide: $isGuide, isAvailable: $isAvailable, languages: $languages}';
   }
 }

@@ -1,11 +1,9 @@
-import 'package:equatable/equatable.dart';
+class AvailableTime {
+  final int dayOfWeek;    // 0=Sunday, 1=Monday, ..., 6=Saturday (as per DATABASE.md)
+  final String startTime; // "HH:mm" format (e.g., "09:00")
+  final String endTime;   // "HH:mm" format (e.g., "17:00")
 
-class AvailableTime extends Equatable {
-  final int dayOfWeek; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  final String startTime; // start time in HH:mm format
-  final String endTime; // end time in HH:mm format
-
-  const AvailableTime({
+  AvailableTime({
     required this.dayOfWeek,
     required this.startTime,
     required this.endTime,
@@ -26,19 +24,4 @@ class AvailableTime extends Equatable {
       'endTime': endTime,
     };
   }
-
-  AvailableTime copyWith({
-    int? dayOfWeek,
-    String? startTime,
-    String? endTime,
-  }) {
-    return AvailableTime(
-      dayOfWeek: dayOfWeek ?? this.dayOfWeek,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
-    );
-  }
-
-  @override
-  List<Object> get props => [dayOfWeek, startTime, endTime];
 }

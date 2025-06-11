@@ -1,283 +1,233 @@
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../models/user.dart' as app_user;
 import '../../../core/utils/logger.dart';
+import '../../../core/exceptions/app_exceptions.dart';
 
-/// Handles all Firebase Authentication operations following Tourpal rules
-/// 
-/// This service manages user authentication including email/password,
-/// Google sign-in, and user registration with Firestore integration.
 class AuthService {
-  final firebase_auth.FirebaseAuth _auth;
-  final FirebaseFirestore _firestore;
-  final GoogleSignIn _googleSignIn;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    // Force account selection every time by not storing the signed-in state
+    forceCodeForRefreshToken: true,
+  );
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  AuthService({
-    firebase_auth.FirebaseAuth? auth,
-    FirebaseFirestore? firestore,
-    GoogleSignIn? googleSignIn,
-  }) : _auth = auth ?? firebase_auth.FirebaseAuth.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance,
-       _googleSignIn = googleSignIn ?? GoogleSignIn();
-
-  /// Get current Firebase user
-  firebase_auth.User? get currentUser => _auth.currentUser;
+  /// Current Firebase user
+  User? get currentUser => _auth.currentUser;
   
-  /// Get current user ID - convenience getter for BLoCs
+  /// Current user ID
   String? get currentUserId => _auth.currentUser?.uid;
+  
+  /// Stream of auth state changes
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  /// Stream of authentication state changes
-  Stream<firebase_auth.User?> get authStateChanges => _auth.authStateChanges();
-
-  /// Stream of current user with profile data - BLoC-compatible getter
-  Stream<app_user.User?> get currentUserStream => _auth.authStateChanges().asyncMap((firebaseUser) async {
-    if (firebaseUser == null) return null;
-    
-    try {
-      final userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
-      if (userDoc.exists) {
-        return app_user.User.fromMap(userDoc.data()!, firebaseUser.uid);
-      }
-      return null;
-    } catch (e) {
-      AppLogger.error('AuthService: Error getting user profile', e);
-      return null;
-    }
-  });
-
-  /// Sign in with email and password - BLoC-compatible method name
-  Future<firebase_auth.UserCredential> signInWithEmailPassword({
+  /// Sign in with email and password
+  Future<void> signInWithEmailPassword({
     required String email,
     required String password,
   }) async {
-    AppLogger.info('AuthService: Attempting email/password sign in');
-    
     try {
+      AppLogger.auth('Attempting email sign in', email);
+      
       final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
       
-      AppLogger.info('AuthService: Email/password sign in successful');
-      AppLogger.serviceOperation('AuthService', 'signInWithEmailPassword', true);
-      return credential;
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      AppLogger.error('AuthService: Email/password sign in failed', e);
-      AppLogger.serviceOperation('AuthService', 'signInWithEmailPassword', false);
+      AppLogger.auth('Email sign in successful', credential.user?.uid);
+    } on FirebaseAuthException catch (e) {
+      AppLogger.error('Firebase auth error during sign in', e);
       throw _handleAuthException(e);
     } catch (e) {
-      AppLogger.error('AuthService: Unexpected sign in error', e);
-      AppLogger.serviceOperation('AuthService', 'signInWithEmailPassword', false);
-      throw Exception('Sign in failed: ${e.toString()}');
+      AppLogger.error('Unexpected error during sign in', e);
+      throw AuthenticationException('Sign in failed: ${e.toString()}');
     }
   }
 
-  /// Sign up with email and password - BLoC-compatible method name
-  Future<firebase_auth.UserCredential> signUpWithEmailPassword({
+  /// Sign up with email and password
+  Future<void> signUpWithEmailPassword({
     required String email,
     required String password,
     required String displayName,
   }) async {
-    AppLogger.info('AuthService: Attempting email/password sign up');
-    
     try {
+      AppLogger.auth('Attempting email sign up', email);
+      
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-
+      
       if (credential.user != null) {
         // Update display name
         await credential.user!.updateDisplayName(displayName.trim());
-
-        // Create user profile in Firestore
-        final user = app_user.User(
-          id: credential.user!.uid,
-          name: displayName.trim(),
-          email: email.trim(),
-          profileImageUrl: null,
-          bio: null,
-          isGuide: false,
-          favoriteTours: [],
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-
-        await _firestore
-            .collection('users')
-            .doc(credential.user!.uid)
-            .set(user.toMap());
-
-        AppLogger.info('AuthService: User profile created in Firestore');
+        
+        // Create user document in Firestore
+        await _createUserDocument(credential.user!, displayName.trim());
+        
+        AppLogger.auth('Email sign up successful', credential.user!.uid);
       }
-
-      AppLogger.info('AuthService: Email/password sign up successful');
-      AppLogger.serviceOperation('AuthService', 'signUpWithEmailPassword', true);
-      return credential;
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      AppLogger.error('AuthService: Email/password sign up failed', e);
-      AppLogger.serviceOperation('AuthService', 'signUpWithEmailPassword', false);
+    } on FirebaseAuthException catch (e) {
+      AppLogger.error('Firebase auth error during sign up', e);
       throw _handleAuthException(e);
     } catch (e) {
-      AppLogger.error('AuthService: Unexpected sign up error', e);
-      AppLogger.serviceOperation('AuthService', 'signUpWithEmailPassword', false);
-      throw Exception('Sign up failed: ${e.toString()}');
+      AppLogger.error('Unexpected error during sign up', e);
+      throw AuthenticationException('Sign up failed: ${e.toString()}');
     }
   }
 
-  /// Sign in with Google - always shows account selection
-  Future<firebase_auth.UserCredential> signInWithGoogle() async {
-    AppLogger.info('AuthService: Attempting Google sign in with account selection');
-    
+  /// Sign in with Google with forced account selection
+  Future<void> signInWithGoogle() async {
     try {
-      // Always clear cached account to ensure account selection appears
-      AppLogger.info('AuthService: Clearing cached Google account for account selection');
+      AppLogger.auth('Attempting Google sign in with account selection');
+      
+      // Force complete sign out to ensure account picker appears
       await _googleSignIn.signOut();
+      await _googleSignIn.disconnect();
 
-      // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
       if (googleUser == null) {
-        AppLogger.warning('AuthService: Google sign in cancelled by user');
-        throw Exception('Google sign in was cancelled');
+        throw AuthenticationException('Google sign in was cancelled');
       }
 
-      AppLogger.info('AuthService: Google account selected - ${googleUser.email}');
-
-      // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Create a new credential
-      final credential = firebase_auth.GoogleAuthProvider.credential(
+      final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Sign in to Firebase with the Google credential
       final userCredential = await _auth.signInWithCredential(credential);
-
-      // Create or update user profile in Firestore if it's a new user
-      if (userCredential.additionalUserInfo?.isNewUser == true && userCredential.user != null) {
-        final user = app_user.User(
-          id: userCredential.user!.uid,
-          name: userCredential.user!.displayName ?? 'User',
-          email: userCredential.user!.email!,
-          profileImageUrl: userCredential.user!.photoURL,
-          bio: null,
-          isGuide: false,
-          favoriteTours: [],
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-
-        await _firestore
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set(user.toMap());
-
-        AppLogger.info('AuthService: New Google user profile created in Firestore');
+      
+      if (userCredential.user != null) {
+        AppLogger.auth('Google sign in successful', userCredential.user!.uid);
       }
-
-      AppLogger.info('AuthService: Google sign in successful for ${userCredential.user?.email}');
-      AppLogger.serviceOperation('AuthService', 'signInWithGoogle', true);
-      return userCredential;
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      AppLogger.error('AuthService: Google sign in failed', e);
-      AppLogger.serviceOperation('AuthService', 'signInWithGoogle', false);
+    } on FirebaseAuthException catch (e) {
+      AppLogger.error('Firebase auth error during Google sign in', e);
       throw _handleAuthException(e);
     } catch (e) {
-      AppLogger.error('AuthService: Unexpected Google sign in error', e);
-      AppLogger.serviceOperation('AuthService', 'signInWithGoogle', false);
-      throw Exception('Google sign in failed: ${e.toString()}');
+      AppLogger.error('Unexpected error during Google sign in', e);
+      throw AuthenticationException('Google sign in failed: ${e.toString()}');
     }
   }
 
-  /// Switch Google account - signs out and shows account selection
-  Future<firebase_auth.UserCredential> switchGoogleAccount() async {
-    AppLogger.info('AuthService: Switching Google account');
-    
+  /// Switch Google account with forced account picker
+  Future<void> switchGoogleAccount() async {
     try {
-      // Sign out from current session
-      await signOut();
+      AppLogger.auth('Switching Google account with forced account selection');
       
-      // Small delay to ensure sign out is complete
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Complete disconnect to ensure fresh account selection
+      await _googleSignIn.signOut();
+      await _googleSignIn.disconnect();
       
-      // Sign in with account selection
-      return await signInWithGoogle();
+      // Sign in again - this will always show the account picker
+      await signInWithGoogle();
     } catch (e) {
-      AppLogger.error('AuthService: Switch Google account failed', e);
-      throw Exception('Failed to switch Google account: ${e.toString()}');
+      AppLogger.error('Error switching Google account', e);
+      throw AuthenticationException('Failed to switch Google account: ${e.toString()}');
+    }
+  }
+
+  /// Force Google account selection (for UI buttons)
+  Future<void> signInWithGoogleAccountSelection() async {
+    try {
+      AppLogger.auth('Forcing Google account selection');
+      
+      // Always disconnect completely before showing account picker
+      await _googleSignIn.disconnect();
+      await signInWithGoogle();
+    } catch (e) {
+      AppLogger.error('Error during forced Google account selection', e);
+      throw AuthenticationException('Google account selection failed: ${e.toString()}');
     }
   }
 
   /// Sign out
   Future<void> signOut() async {
-    AppLogger.info('AuthService: Attempting sign out');
-    
     try {
+      AppLogger.auth('Signing out');
+      
       await Future.wait([
         _auth.signOut(),
         _googleSignIn.signOut(),
       ]);
       
-      AppLogger.info('AuthService: Sign out successful');
-      AppLogger.serviceOperation('AuthService', 'signOut', true);
+      AppLogger.auth('Sign out successful');
     } catch (e) {
-      AppLogger.error('AuthService: Sign out failed', e);
-      AppLogger.serviceOperation('AuthService', 'signOut', false);
-      throw Exception('Sign out failed: ${e.toString()}');
+      AppLogger.error('Error during sign out', e);
+      throw AuthenticationException('Sign out failed: ${e.toString()}');
     }
   }
 
   /// Send password reset email
   Future<void> sendPasswordResetEmail(String email) async {
-    AppLogger.info('AuthService: Sending password reset email');
-    
     try {
+      AppLogger.auth('Sending password reset email', email);
+      
       await _auth.sendPasswordResetEmail(email: email.trim());
       
-      AppLogger.info('AuthService: Password reset email sent successfully');
-      AppLogger.serviceOperation('AuthService', 'sendPasswordResetEmail', true);
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      AppLogger.error('AuthService: Password reset failed', e);
-      AppLogger.serviceOperation('AuthService', 'sendPasswordResetEmail', false);
+      AppLogger.auth('Password reset email sent', email);
+    } on FirebaseAuthException catch (e) {
+      AppLogger.error('Firebase auth error sending password reset', e);
       throw _handleAuthException(e);
     } catch (e) {
-      AppLogger.error('AuthService: Unexpected password reset error', e);
-      AppLogger.serviceOperation('AuthService', 'sendPasswordResetEmail', false);
-      throw Exception('Password reset failed: ${e.toString()}');
+      AppLogger.error('Unexpected error sending password reset', e);
+      throw AuthenticationException('Failed to send password reset email: ${e.toString()}');
     }
   }
 
-  /// Handle Firebase Auth exceptions with user-friendly messages
-  Exception _handleAuthException(firebase_auth.FirebaseAuthException e) {
+  /// Create user document in Firestore with enhanced profile data
+  /// 
+  /// Creates a comprehensive user profile document with imported data from
+  /// the authentication provider. For Google sign-ups, this includes profile
+  /// photos and any available birthdate information.
+  Future<void> _createUserDocument(User firebaseUser, String displayName, {
+    String? importedProfileImageUrl,
+    Timestamp? importedBirthdate,
+  }) async {
+    final now = DateTime.now();
+    
+    // Prepare user data with priority: imported data > Firebase data > defaults
+    final userData = {
+      'email': firebaseUser.email,
+      'name': displayName,
+      'bio': null,
+      'profileImageUrl': importedProfileImageUrl ?? firebaseUser.photoURL,
+      'birthdate': importedBirthdate, // Use imported birthdate if available
+      'isGuide': false,
+      'favoriteTours': <String>[],
+      'createdAt': Timestamp.fromDate(now),
+      'updatedAt': Timestamp.fromDate(now),
+    };
+
+    AppLogger.database('Creating user document with imported profile data', 'users', firebaseUser.uid);
+    
+    await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .set(userData);
+  }
+
+  /// Handle Firebase Auth exceptions
+  AuthenticationException _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
-        return Exception('No user found with this email address.');
+        return const AuthenticationException('No user found with this email address');
       case 'wrong-password':
-        return Exception('Incorrect password.');
+        return const AuthenticationException('Incorrect password');
       case 'email-already-in-use':
-        return Exception('An account already exists with this email.');
+        return const AuthenticationException('An account already exists with this email');
       case 'weak-password':
-        return Exception('Password is too weak. Please choose a stronger password.');
+        return const AuthenticationException('Password is too weak');
       case 'invalid-email':
-        return Exception('Invalid email address.');
+        return const AuthenticationException('Invalid email address');
       case 'user-disabled':
-        return Exception('This account has been disabled.');
+        return const AuthenticationException('This account has been disabled');
       case 'too-many-requests':
-        return Exception('Too many failed attempts. Please try again later.');
-      case 'operation-not-allowed':
-        return Exception('This sign-in method is not enabled.');
-      case 'invalid-credential':
-        return Exception('Invalid credentials provided.');
-      case 'account-exists-with-different-credential':
-        return Exception('An account already exists with the same email but different sign-in credentials.');
-      case 'requires-recent-login':
-        return Exception('This operation requires recent authentication. Please sign in again.');
+        return const AuthenticationException('Too many attempts. Please try again later');
+      case 'network-request-failed':
+        return const AuthenticationException('Network error. Please check your connection');
       default:
-        return Exception('Authentication failed: ${e.message ?? e.code}');
+        return AuthenticationException('Authentication failed: ${e.message}');
     }
   }
 }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../dashboard/presentation/bloc/dashboard_bloc.dart';
-import '../../../dashboard/presentation/bloc/dashboard_state.dart';
-import '../../../dashboard/presentation/bloc/dashboard_event.dart';
-import '../../../guide/presentation/screens/guide_booking_management_screen.dart';
-import '../../../tour_creation/presentation/screens/create_tour_screen.dart';
+import '../../../bookings/presentation/screens/guide_bookings_screen.dart';
+import '../../../tours/presentation/screens/create_tour_screen.dart';
+import '../../../tours/presentation/screens/active_tour_map_screen.dart';
+import '../../../../models/booking.dart';
+import '../../../../models/tour_session.dart';
+import '../../../../models/tour_plan.dart';
 
 class GuideDashboardScreen extends StatefulWidget {
   final Function(int)? onNavigateToTab;
@@ -17,251 +19,681 @@ class GuideDashboardScreen extends StatefulWidget {
 }
 
 class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
+  String? _currentUserId;
+  TourSession? _activeTourSession;
+  List<Booking> _recentBookings = [];
+  List<TourPlan> _myTours = [];
+  bool _isLoading = true;
+  int _totalBookings = 0;
+  int _activeTours = 0;
+
   @override
   void initState() {
     super.initState();
-    context.read<DashboardBloc>().add(const LoadDashboard(userId: 'current_user'));
+    _initializeDashboard();
+  }
+
+  void _initializeDashboard() {
+    _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (_currentUserId != null) {
+      _loadDashboardData();
+    }
+  }
+
+  Future<void> _loadDashboardData() async {
+    if (_currentUserId == null) return;
+
+    try {
+      // Load all data in parallel
+      await Future.wait([
+        _loadActiveTourSession(),
+        _loadRecentBookings(),
+        _loadMyTours(),
+        _loadStats(),
+      ]);
+      
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading dashboard data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadActiveTourSession() async {
+    try {
+      final sessionsQuery = await FirebaseFirestore.instance
+          .collection('tourSessions')
+          .where('guideId', isEqualTo: _currentUserId)
+          .where('status', whereIn: ['active', 'waitingForTraveler', 'scheduled'])
+          .orderBy('scheduledStartTime', descending: true)
+          .limit(1)
+          .get();
+
+      if (sessionsQuery.docs.isNotEmpty) {
+        final sessionData = sessionsQuery.docs.first.data();
+        _activeTourSession = TourSession.fromMap(sessionData, sessionsQuery.docs.first.id);
+      }
+    } catch (e) {
+      print('Error loading active tour session: $e');
+    }
+  }
+
+  Future<void> _loadRecentBookings() async {
+    try {
+      // Get bookings for tours created by this guide
+      final myToursQuery = await FirebaseFirestore.instance
+          .collection('tourPlans')
+          .where('guideId', isEqualTo: _currentUserId)
+          .get();
+
+      if (myToursQuery.docs.isNotEmpty) {
+        final tourPlanIds = myToursQuery.docs.map((doc) => doc.id).toList();
+        
+        final bookingsQuery = await FirebaseFirestore.instance
+            .collection('bookings')
+            .where('tourPlanId', whereIn: tourPlanIds)
+            .orderBy('bookedAt', descending: true)
+            .limit(5)
+            .get();
+
+        _recentBookings = bookingsQuery.docs
+            .map((doc) => Booking.fromMap(doc.data(), doc.id))
+            .toList();
+      }
+    } catch (e) {
+      print('Error loading recent bookings: $e');
+    }
+  }
+
+  Future<void> _loadMyTours() async {
+    try {
+      final toursQuery = await FirebaseFirestore.instance
+          .collection('tourPlans')
+          .where('guideId', isEqualTo: _currentUserId)
+          .orderBy('createdAt', descending: true)
+          .limit(3)
+          .get();
+
+      _myTours = toursQuery.docs
+          .map((doc) => TourPlan.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      print('Error loading my tours: $e');
+    }
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      // Count total bookings for this guide's tours
+      final myToursQuery = await FirebaseFirestore.instance
+          .collection('tourPlans')
+          .where('guideId', isEqualTo: _currentUserId)
+          .get();
+
+      if (myToursQuery.docs.isNotEmpty) {
+        final tourPlanIds = myToursQuery.docs.map((doc) => doc.id).toList();
+        
+        final bookingsQuery = await FirebaseFirestore.instance
+            .collection('bookings')
+            .where('tourPlanId', whereIn: tourPlanIds)
+            .get();
+
+        _totalBookings = bookingsQuery.docs.length;
+      }
+
+      // Count active tours (sessions)
+      final activeSessionsQuery = await FirebaseFirestore.instance
+          .collection('tourSessions')
+          .where('guideId', isEqualTo: _currentUserId)
+          .where('status', whereIn: ['active', 'waitingForTraveler'])
+          .get();
+
+      _activeTours = activeSessionsQuery.docs.length;
+    } catch (e) {
+      print('Error loading stats: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Guide Hub',
+          'Guide Dashboard',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
             color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.orange,
+        backgroundColor: AppColors.secondary,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Guide notifications coming soon!')),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.business_center, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const GuideBookingManagementScreen()),
-              );
+              setState(() {
+                _isLoading = true;
+              });
+              _loadDashboardData();
             },
           ),
         ],
       ),
-      body: BlocBuilder<DashboardBloc, DashboardState>(
-        builder: (context, state) {
-          if (state is DashboardLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          if (state is DashboardError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(state.message),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => context.read<DashboardBloc>().add(const LoadDashboard(userId: 'current_user')),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Guide Welcome Section
-                _buildGuideWelcomeSection(state),
-                const SizedBox(height: 24),
-                
-                // Guide Statistics
-                if (state is DashboardLoaded) ...[
-                  _buildGuideStats(state.stats),
-                  const SizedBox(height: 24),
-                ],
-                
-                // Guide Quick Actions
-                _buildGuideQuickActions(),
-                
-                const SizedBox(height: 24),
-                
-                // Pending Bookings section
-                if (state is DashboardLoaded) 
-                  _buildPendingBookingsSection(),
-              ],
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateTourScreen()),
-          );
-        },
-        backgroundColor: Colors.orange,
-        icon: const Icon(Icons.add),
-        label: const Text('Create Tour'),
+      body: RefreshIndicator(
+        onRefresh: _loadDashboardData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Active tour banner
+              if (_activeTourSession != null)
+                _buildActiveTourBanner(),
+              
+              // Welcome section
+              _buildWelcomeSection(),
+              
+              const SizedBox(height: 24),
+              
+              // Stats cards
+              _buildStatsCards(),
+              
+              const SizedBox(height: 24),
+              
+              // Quick actions
+              _buildQuickActions(),
+              
+              const SizedBox(height: 24),
+              
+              // Recent bookings
+              _buildRecentBookings(),
+              
+              const SizedBox(height: 24),
+              
+              // My tours
+              _buildMyTours(),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildGuideWelcomeSection(DashboardState state) {
+  Widget _buildActiveTourBanner() {
+    final session = _activeTourSession!;
+    final isActive = session.status == TourSessionStatus.active;
+    final isWaiting = session.status == TourSessionStatus.waitingForTraveler;
+    
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Colors.orange,
-            Colors.orange.withValues(alpha: 0.8),
-          ],
+          colors: isActive 
+              ? [Colors.green.shade400, Colors.green.shade600]
+              : [AppColors.guide.withOpacity(0.8), AppColors.guide],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: (isActive ? Colors.green : AppColors.guide).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          if (state is DashboardLoaded) ...[
-            Text(
-              '🌟 Welcome, Guide ${state.user.name}!',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Ready to share amazing experiences with travelers?',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                height: 1.4,
-              ),
+            child: Icon(
+              isActive ? Icons.tour : Icons.schedule,
+              color: isActive ? Colors.green.shade600 : AppColors.guide,
+              size: 24,
             ),
-          ] else ...[
-            const Text(
-              '🎯 Guide Hub',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isActive ? 'Tour in Progress' : 'Tour Starting Soon',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  isActive 
+                      ? 'Guide your traveler through the tour'
+                      : isWaiting 
+                          ? 'Waiting for traveler to join'
+                          : 'Tour scheduled to start',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Manage your tours and connect with travelers.',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                height: 1.4,
-              ),
+          ),
+          ElevatedButton(
+            onPressed: () => _manageActiveTour(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: isActive ? Colors.green.shade600 : AppColors.guide,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
-          ],
-          const SizedBox(height: 16)
+            child: Text(isActive ? 'Manage Tour' : 'Start Tour'),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildGuideStats(DashboardStats stats) {
+  Widget _buildWelcomeSection() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Your Guide Performance',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.pending_actions,
-                title: '${stats.upcomingBookings}',
-                subtitle: 'Pending',
-                color: Colors.orange,
+            const Text(
+              'Welcome, Guide!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.tour,
-                title: '${stats.completedTours}',
-                subtitle: 'Tours Led',
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.monetization_on,
-                title: '\$${stats.totalSpent.toInt()}',
-                subtitle: 'Earned',
-                color: Colors.blue,
+            const SizedBox(height: 8),
+            const Text(
+          'Manage your tours and guide amazing experiences',
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.textSecondary,
               ),
             ),
           ],
+    );
+  }
+
+  Widget _buildStatsCards() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            title: 'Active Tours',
+            value: _activeTours.toString(),
+            icon: Icons.tour,
+            color: _activeTours > 0 ? Colors.green : AppColors.guide,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            title: 'Total Bookings',
+            value: _totalBookings.toString(),
+            icon: Icons.book_online,
+            color: AppColors.secondary,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildStatCard({
-    required IconData icon,
     required String title,
-    required String subtitle,
+    required String value,
+    required IconData icon,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: color, size: 24),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Column(
+    );
+  }
+
+  Widget _buildQuickActions() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Quick Actions',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Builder(
+              builder: (context) => Column(
+                children: [
+                  _buildActionRow(
+                    context: context,
+                    icon: Icons.add_circle_outline,
+                    label: 'Create New Tour',
+                    color: AppColors.secondary,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CreateTourScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionRow(
+                    context: context,
+                    icon: Icons.calendar_today_outlined,
+                    label: 'Manage Bookings',
+                    color: AppColors.warning,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const GuideBookingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionRow(
+                    context: context,
+                    icon: Icons.tour_outlined,
+                    label: 'View My Tours',
+                    color: AppColors.guide,
+                    onTap: () => widget.onNavigateToTab?.call(1),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionRow(
+                    context: context,
+                    icon: Icons.schedule_outlined,
+                    label: 'View Schedule',
+                    color: AppColors.info,
+                    onTap: () => widget.onNavigateToTab?.call(2),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionRow({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentBookings() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Recent Bookings',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const GuideBookingsScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('View All'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_recentBookings.isEmpty)
+              const Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.event_busy,
+                      size: 48,
+                      color: AppColors.textSecondary,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'No bookings yet',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Create tours to start receiving bookings!',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...(_recentBookings.take(3).map((booking) => _buildBookingItem(booking))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMyTours() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'My Tours',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => widget.onNavigateToTab?.call(1),
+                  child: const Text('View All'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_myTours.isEmpty)
+              const Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.tour,
+                      size: 48,
+                      color: AppColors.textSecondary,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'No tours created yet',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Create your first tour to start guiding!',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...(_myTours.map((tour) => _buildTourItem(tour))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookingItem(Booking booking) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundLight,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _getStatusColor(booking.status).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _getStatusIcon(booking.status),
+              color: _getStatusColor(booking.status),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tour Booking',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  _formatBookingStatus(booking.status),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _getStatusColor(booking.status),
+                  ),
+                ),
+              ],
             ),
           ),
           Text(
-            subtitle,
-            style: TextStyle(
+            _formatDate(booking.bookedAt.toDate()),
+            style: const TextStyle(
               fontSize: 12,
-              color: Colors.grey[600],
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -269,202 +701,164 @@ class _GuideDashboardScreenState extends State<GuideDashboardScreen> {
     );
   }
 
-  Widget _buildGuideQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+  Widget _buildTourItem(TourPlan tour) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundLight,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.guide.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.tour,
+              color: AppColors.guide,
+              size: 20,
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildQuickActionCard(
-                icon: Icons.add_circle,
-                title: 'Create Tour',
-                subtitle: 'Add new experience',
-                color: Colors.orange,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CreateTourScreen()),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildQuickActionCard(
-                icon: Icons.calendar_today,
-                title: 'Manage Bookings',
-                subtitle: 'Review requests',
-                color: Colors.blue,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const GuideBookingManagementScreen()),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildQuickActionCard(
-                icon: Icons.tour,
-                title: 'My Tours',
-                subtitle: 'View all tours',
-                color: Colors.green,
-                onTap: () {
-                  if (widget.onNavigateToTab != null) {
-                    widget.onNavigateToTab!(1); // Navigate to My Tours tab
-                  }
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildQuickActionCard(
-                icon: Icons.analytics,
-                title: 'Analytics',
-                subtitle: 'View insights',
-                color: Colors.purple,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Analytics feature coming soon!')),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPendingBookingsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Pending Requests',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.pending,
-                size: 48,
-                color: Colors.orange,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'No Pending Requests',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tour.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'New booking requests will appear here',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
+                Text(
+                  '${tour.places.length} places • ${tour.duration} hours',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const GuideBookingManagementScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                child: const Text('View All Bookings', style: TextStyle(color: Colors.white)),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+          Text(
+            '€${tour.price.toStringAsFixed(0)}',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.guide,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 32,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  void _manageActiveTour() async {
+    if (_activeTourSession == null) return;
+
+    try {
+      // Get booking and tour plan data
+      final bookingDoc = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('tourPlanId', isEqualTo: _activeTourSession!.tourPlanId)
+          .where('travelerId', isEqualTo: _activeTourSession!.travelerId)
+          .limit(1)
+          .get();
+
+      if (bookingDoc.docs.isNotEmpty) {
+        final booking = Booking.fromMap(bookingDoc.docs.first.data(), bookingDoc.docs.first.id);
+        
+        // Navigate to active tour screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ActiveTourMapScreen(
+              booking: booking,
+              tourSession: _activeTourSession,
+              sessionId: _activeTourSession!.id,
+              isGuide: true,
+              isRejoining: true,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error managing tour: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'cancelled':
+        return Colors.red;
+      case 'completed':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return Icons.check_circle;
+      case 'pending':
+        return Icons.schedule;
+      case 'cancelled':
+        return Icons.cancel;
+      case 'completed':
+        return Icons.done_all;
+      default:
+        return Icons.help;
+    }
+  }
+
+  String _formatBookingStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return 'Confirmed';
+      case 'pending':
+        return 'Pending';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'completed':
+        return 'Completed';
+      default:
+        return status.toUpperCase();
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return '${date.day}/${date.month}';
+    }
   }
 }

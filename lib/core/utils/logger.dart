@@ -1,36 +1,74 @@
-import 'dart:developer' as developer;
+import 'dart:developer' as dev;
 
+enum LogLevel { debug, info, warning, error, critical }
+
+/// Centralized logging utility for the TourPal application
+/// 
+/// Provides consistent logging patterns with different severity levels
+/// and context-aware logging for better debugging and monitoring.
 class AppLogger {
-  static const String _appName = 'TOURPAL';
+  static const String _appName = 'TourPal';
+
+  /// Log levels for filtering
+  static bool debugEnabled = true;
+  static bool infoEnabled = true;
+  static bool warningEnabled = true;
+  static bool errorEnabled = true;
+  static bool criticalEnabled = true;
   
-  // ✅ GOOD: Different log levels with emojis for easy identification
-  static void debug(String message, [dynamic error]) {
-    _log('🐛 DEBUG', message, error);
+  static void _log(String level, String message, [dynamic data]) {
+    final timestamp = DateTime.now().toIso8601String();
+    final logMessage = '[$timestamp] $level: $message';
+    
+    // Print to console in debug mode
+    dev.log(
+      logMessage,
+      name: _appName,
+      error: data is Exception ? data : null,
+    );
+    
+    // In production, you might want to send critical errors to a monitoring service
+    // if (level == '🚨 CRITICAL' && !kDebugMode) {
+    //   FirebaseCrashlytics.instance.recordError(message, null);
+    // }
   }
   
-  static void info(String message, [dynamic error]) {
-    _log('ℹ️ INFO', message, error);
+  static void debug(String message, [dynamic data]) {
+    if (debugEnabled) {
+      _log('🐛 DEBUG', message, data);
+    }
   }
   
-  static void warning(String message, [dynamic error]) {
-    _log('⚠️ WARNING', message, error);
+  static void info(String message, [dynamic data]) {
+    if (infoEnabled) {
+      _log('ℹ️ INFO', message, data);
+    }
   }
   
-  static void error(String message, [dynamic error]) {
-    _log('🚨 ERROR', message, error);
+  static void warning(String message, [dynamic data]) {
+    if (warningEnabled) {
+      _log('⚠️ WARNING', message, data);
+    }
   }
   
-  static void critical(String message, [dynamic error]) {
-    _log('💥 CRITICAL', message, error);
+  static void error(String message, [dynamic data]) {
+    if (errorEnabled) {
+      _log('❌ ERROR', message, data);
+    }
   }
   
-  // ✅ GOOD: Specialized logging for BLoC architecture
-  static void blocTransition(String blocName, String currentState, String nextState) {
-    _log('🔄 BLOC TRANSITION', '$blocName: $currentState → $nextState');
+  static void critical(String message, [dynamic data]) {
+    if (criticalEnabled) {
+      _log('🚨 CRITICAL', message, data);
+    }
   }
   
   static void blocEvent(String blocName, String eventName) {
     _log('🎯 BLOC EVENT', '$blocName: $eventName');
+  }
+  
+  static void blocTransition(String blocName, String currentState, String nextState) {
+    _log('🔄 BLOC TRANSITION', '$blocName: $currentState → $nextState');
   }
   
   static void serviceOperation(String serviceName, String operation, bool success) {
@@ -53,60 +91,24 @@ class AppLogger {
     _log('🧭 NAVIGATION', 'Navigating to $route$paramStr');
   }
   
+  static void network(String method, String url, int? statusCode, [Duration? duration]) {
+    final statusStr = statusCode != null ? ' ($statusCode)' : '';
+    final durationStr = duration != null ? ' in ${duration.inMilliseconds}ms' : '';
+    _log('🌐 NETWORK', '$method $url$statusStr$durationStr');
+  }
+  
   static void auth(String operation, [String? userId]) {
-    final userStr = userId != null ? ' (User: $userId)' : '';
+    final userStr = userId != null ? ' for user $userId' : '';
     _log('🔐 AUTH', '$operation$userStr');
   }
   
-  // ✅ GOOD: Private method for consistent formatting
-  static void _log(String level, String message, [dynamic error]) {
-    final timestamp = DateTime.now().toIso8601String();
-    final formattedMessage = '[$_appName] [$timestamp] $level: $message';
-    
-    if (error != null) {
-      developer.log(
-        formattedMessage,
-        error: error,
-        name: _appName,
-      );
-    } else {
-      developer.log(
-        formattedMessage,
-        name: _appName,
-      );
-    }
+  static void database(String operation, String collection, [String? docId]) {
+    final docStr = docId != null ? '/$docId' : '';
+    _log('🗄️ DATABASE', '$operation: $collection$docStr');
   }
   
-  // ✅ GOOD: Feature-specific logging helpers
-  static void profile(String operation, [dynamic data]) {
-    _log('👤 PROFILE', '$operation${data != null ? ': $data' : ''}');
-  }
-  
-  static void tour(String operation, [dynamic data]) {
-    _log('🗺️ TOUR', '$operation${data != null ? ': $data' : ''}');
-  }
-  
-  static void booking(String operation, [dynamic data]) {
-    _log('📅 BOOKING', '$operation${data != null ? ': $data' : ''}');
-  }
-  
-  static void review(String operation, [dynamic data]) {
-    _log('⭐ REVIEW', '$operation${data != null ? ': $data' : ''}');
-  }
-  
-  static void message(String operation, [dynamic data]) {
-    _log('💬 MESSAGE', '$operation${data != null ? ': $data' : ''}');
-  }
-  
-  static void journal(String operation, [dynamic data]) {
-    _log('📖 JOURNAL', '$operation${data != null ? ': $data' : ''}');
-  }
-  
-  static void guide(String operation, [dynamic data]) {
-    _log('👨‍🏫 GUIDE', '$operation${data != null ? ': $data' : ''}');
-  }
-
-  static void place(String operation, String placeId) {
-    _log('📍 PLACE', '$operation (Place ID: $placeId)');
+  static void storage(String operation, String path, [int? fileSize]) {
+    final sizeStr = fileSize != null ? ' (${(fileSize / 1024).toStringAsFixed(1)}KB)' : '';
+    _log('📁 STORAGE', '$operation: $path$sizeStr');
   }
 }

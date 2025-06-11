@@ -1,127 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:tourpal/core/config/firebase_options.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// Core imports following TourPal rules
-import 'core/providers/app_providers.dart';
+import 'core/constants/app_colors.dart';
 import 'core/utils/logger.dart';
-import 'core/constants/app_theme.dart';
-import 'core/auth/auth_wrapper.dart';
+import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    AppLogger.info('🚀 TOURPAL App initializing...');
-    // ✅ FIXED: Use proper Firebase options configuration
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    AppLogger.info('🔥 Firebase initialized successfully with proper configuration');
+    // Load environment variables
+    await dotenv.load(fileName: ".env");
+    AppLogger.info('Environment variables loaded successfully');
     
-    runApp(const TourpalApp());
-    AppLogger.info('✅ TOURPAL App started successfully');
+    await Firebase.initializeApp();
+    AppLogger.info('Firebase initialized successfully');
+    
+    // Initialize Firebase App Check
+    await FirebaseAppCheck.instance.activate(
+      // For Android, use debug provider in debug mode
+      androidProvider: AndroidProvider.debug,
+      // For iOS, use debug provider in debug mode  
+      appleProvider: AppleProvider.debug,
+    );
+    AppLogger.info('Firebase App Check initialized successfully');
+    
+    runApp(const MyApp());
   } catch (e) {
-    AppLogger.critical('💥 Failed to initialize app', e);
-    runApp(ErrorApp(error: e.toString()));
+    AppLogger.critical('Failed to initialize Firebase: $e');
+    runApp(const ErrorApp());
   }
 }
 
-class TourpalApp extends StatelessWidget {
-  const TourpalApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    AppLogger.info('TourpalApp: Building main app with AppProviders');
-    
-    return AppProviders(
-      child: MaterialApp(
-        title: 'TOURPAL',
-        theme: AppTheme.lightTheme,
-        home: const AuthWrapper(),
-        debugShowCheckedModeBanner: false,
-        onUnknownRoute: (settings) {
-          AppLogger.warning('Unknown route requested: ${settings.name}');
-          return MaterialPageRoute(
-            builder: (context) => const AuthWrapper(),
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// Error app to show when Firebase initialization fails
 class ErrorApp extends StatelessWidget {
-  final String error;
-  
-  const ErrorApp({super.key, required this.error});
+  const ErrorApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TOURPAL - Error',
-      theme: ThemeData.light(),
       home: Scaffold(
-        backgroundColor: Colors.red.shade50,
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red.shade700,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  '🚨 TOURPAL Initialization Failed',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red.shade700,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'There was an error starting the app:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.red.shade600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.red.shade300),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    error,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontFamily: 'monospace',
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Please restart the app or contact support.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.red.shade600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: AppColors.error),
+              const SizedBox(height: 16),
+              const Text(
+                'Failed to initialize app',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text('Please check your configuration and try again.'),
+            ],
           ),
         ),
       ),
