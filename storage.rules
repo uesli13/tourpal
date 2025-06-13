@@ -32,12 +32,14 @@ service firebase.storage {
       return isValidDocumentType() && isValidDocumentSize();
     }
     
-    // User profile images - corrected path to match actual implementation
+    // User profile images - fixed path and validation logic
     match /profile_images/{userImageFile} {
-      allow read, write: if isAuthenticated() && 
-                          userImageFile.split('.')[0] == request.auth.uid &&
-                          isValidImageType() && 
-                          isValidImageSize();
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && 
+                    (userImageFile.matches(request.auth.uid + '\\.(jpg|jpeg|png|webp)') ||
+                     userImageFile.matches(request.auth.uid + '_[0-9]+\\.(jpg|jpeg|png|webp)')) &&
+                    isValidImageType() && 
+                    isValidImageSize();
     }
     
     // User documents (ID verification, certifications) - as specified in STORAGE.md

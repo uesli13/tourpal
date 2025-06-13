@@ -3,15 +3,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/google_directions_service.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../models/tour_plan.dart';
 import '../../../../models/place.dart';
 import '../../../../models/user.dart';
-import '../../domain/repositories/tour_repository.dart';
 import '../../../bookings/presentation/widgets/book_tour_widget.dart';
 
 class TourPreviewScreen extends StatefulWidget {
@@ -173,7 +172,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
           segmentDistance = directionsResult.distanceValue; // km
           segmentWalkingTime = directionsResult.durationValue.round(); // minutes
           
-          print('✅ Google Directions: ${segmentDistance.toStringAsFixed(2)} km, ${segmentWalkingTime} min walking');
+          AppLogger.logInfo('✅ Google Directions: ${segmentDistance.toStringAsFixed(2)} km, $segmentWalkingTime min walking');
         } else {
           // Fallback to straight line if API fails
           routeCoordinates = [startPoint, endPoint];
@@ -187,7 +186,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
           // Estimate walking time (average 5 km/h)
           segmentWalkingTime = (segmentDistance / 5 * 60).round(); // minutes
           
-          print('⚠️ Fallback to straight line: ${segmentDistance.toStringAsFixed(2)} km, ${segmentWalkingTime} min walking');
+          AppLogger.logInfo('⚠️ Fallback to straight line: ${segmentDistance.toStringAsFixed(2)} km, $segmentWalkingTime min walking');
         }
 
         totalDistance += segmentDistance;
@@ -229,10 +228,10 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
         _isLoadingRoute = false;
       });
 
-      print('🎯 Total tour: ${totalDistance.toStringAsFixed(2)} km, ${totalWalkingTime} min walking + ${totalTimeAtPlaces} min at places = ${totalWalkingTime + totalTimeAtPlaces} min total');
+      AppLogger.logInfo('🎯 Total tour: ${totalDistance.toStringAsFixed(2)} km, $totalWalkingTime min walking + $totalTimeAtPlaces min at places = ${totalWalkingTime + totalTimeAtPlaces} min total');
       
     } catch (e) {
-      print('Error calculating route: $e');
+      AppLogger.logInfo('Error calculating route: $e');
       setState(() {
         _isLoadingRoute = false;
       });
@@ -280,110 +279,6 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
     return '${mins}m';
   }
 
-  Future<void> _publishTour() async {
-    try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-          ),
-        ),
-      );
-
-      // Check if tour is ready to be published
-      if (!widget.tourPlan.isReadyToPublish) {
-        Navigator.pop(context); // Close loading dialog
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Tour cannot be published yet. Please ensure you have:\n'
-              '• At least 2 places\n'
-              '• A title\n'
-              '• A description',
-            ),
-            backgroundColor: Colors.orange,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-        return;
-      }
-
-      // Update tour status to published
-      final tourRepository = context.read<TourRepository>();
-      final updatedTour = widget.tourPlan.copyWith(
-        status: TourStatus.published,
-        updatedAt: Timestamp.now(),
-      );
-
-      await tourRepository.updateTour(updatedTour);
-
-      // Close loading dialog
-      Navigator.pop(context);
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Tour published successfully! 🎉\nTravelers can now discover and book your tour.',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-
-      // Navigate back with 'published' result
-      Navigator.pop(context, 'published');
-
-    } catch (e) {
-      // Close loading dialog if still open
-      Navigator.pop(context);
-      
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Failed to publish tour: ${e.toString()}',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    }
-  }
-
   Future<void> _loadGuideData() async {
     if (widget.tourPlan.guideId.isEmpty) return;
     
@@ -399,7 +294,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
         });
       }
     } catch (e) {
-      print('Error loading guide data: $e');
+      AppLogger.logInfo('Error loading guide data: $e');
     }
   }
 
@@ -462,7 +357,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
             // Loading Overlay
             if (_isLoadingRoute)
               Container(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 child: const Center(
                   child: CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
@@ -492,8 +387,8 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.black.withOpacity(0.7),
-              Colors.black.withOpacity(0.3),
+              Colors.black.withValues(alpha: 0.7),
+              Colors.black.withValues(alpha: 0.3),
               Colors.transparent,
             ],
           ),
@@ -507,7 +402,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -531,7 +426,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -573,7 +468,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -608,7 +503,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 20,
               offset: const Offset(0, -4),
             ),
@@ -664,7 +559,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
             const SizedBox(height: 20),
             
             // Places List
-            Container(
+            SizedBox(
               height: 120,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
@@ -683,7 +578,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
               // Do not show any buttons when hideActions is true
               const SizedBox.shrink(),
             ] else if (widget.isExploreMode) ...[
-              // In explore mode, show the book tour button (reverted back to original)
+              // In explore mode, show the book tour button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -698,72 +593,21 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
                 ),
               ),
             ] else ...[
-              // In guide mode, show edit and publish buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context, 'edit');
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit Tour'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.primary),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
+              // In guide mode, show only edit button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context, 'edit');
+                  },
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Edit Tour'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: widget.tourPlan.status == TourStatus.published
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.green),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Published',
-                                  style: TextStyle(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ElevatedButton.icon(
-                            onPressed: widget.tourPlan.isReadyToPublish 
-                                ? () => _publishTour()
-                                : null,
-                            icon: Icon(
-                              widget.tourPlan.isReadyToPublish 
-                                  ? Icons.publish 
-                                  : Icons.warning,
-                            ),
-                            label: Text(
-                              widget.tourPlan.isReadyToPublish 
-                                  ? 'Publish' 
-                                  : 'Not Ready',
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: widget.tourPlan.isReadyToPublish 
-                                  ? AppColors.primary 
-                                  : Colors.grey,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                  ),
-                ],
+                ),
               ),
             ],
           ],
@@ -781,9 +625,9 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -827,7 +671,7 @@ class _TourPreviewScreenState extends State<TourPreviewScreen>
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
             ),
             child: place.photoUrl != null
                 ? ClipRRect(

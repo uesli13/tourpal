@@ -191,7 +191,7 @@ class _TravelerBookingsScreenState extends State<TravelerBookingsScreen>
           Icon(
             Icons.bookmarks_outlined,
             size: 80,
-            color: AppColors.tourist.withOpacity(0.3),
+            color: AppColors.tourist.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
@@ -199,7 +199,7 @@ class _TravelerBookingsScreenState extends State<TravelerBookingsScreen>
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary.withOpacity(0.7),
+              color: AppColors.textPrimary.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 8),
@@ -257,7 +257,7 @@ class _TravelerBookingsScreenState extends State<TravelerBookingsScreen>
             Icon(
               emptyIcon,
               size: 64,
-              color: AppColors.tourist.withOpacity(0.3),
+              color: AppColors.tourist.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
             Text(

@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../models/tour_journal.dart';
 import '../../../../models/journal_entry.dart';
 import '../../../../models/place.dart';
@@ -159,7 +160,7 @@ class _TourJournalWidgetState extends State<TourJournalWidget> with TickerProvid
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -171,7 +172,7 @@ class _TourJournalWidgetState extends State<TourJournalWidget> with TickerProvid
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
             child: Icon(
@@ -297,9 +298,9 @@ class _TourJournalWidgetState extends State<TourJournalWidget> with TickerProvid
     return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
@@ -485,10 +486,10 @@ class _TourJournalWidgetState extends State<TourJournalWidget> with TickerProvid
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isVisited ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+        color: isVisited ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isVisited ? Colors.green.withOpacity(0.3) : Colors.orange.withOpacity(0.3),
+          color: isVisited ? Colors.green.withValues(alpha: 0.3) : Colors.orange.withValues(alpha: 0.3),
           ),
       ),
       child: Row(
@@ -911,7 +912,7 @@ class _TourJournalWidgetState extends State<TourJournalWidget> with TickerProvid
         });
       }
     } catch (e) {
-      print('Error picking image: $e');
+      AppLogger.logInfo('Error picking image: $e');
     }
   }
 

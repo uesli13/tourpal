@@ -1,8 +1,7 @@
 // Copied from lib-old/features/auth/presentation/widgets/auth_text_field.dart
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
-
-import '../../../../core/constants/ui_constants.dart';
+import '../../../../core/constants/app_constants.dart';
 
 class AuthTextField extends StatelessWidget {
   final TextEditingController controller;

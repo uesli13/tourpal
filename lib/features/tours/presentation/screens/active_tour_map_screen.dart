@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../models/booking.dart';
 import '../../../../models/place.dart';
 import '../../../../models/tour_plan.dart';
@@ -149,7 +150,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
       _sessionService = TourSessionService();
       _journalService = TourJournalService();
     } catch (e) {
-      print('Error initializing services: $e');
+      AppLogger.logInfo('Error initializing services: $e');
       _locationService = LocationTrackingService();
       _sessionService = TourSessionService();
       _journalService = TourJournalService();
@@ -241,7 +242,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
         
         // Mark user as online when rejoining
         await _sessionService.markUserOnline(_currentSession!.id, _isGuide);
-        print('Marked user online when rejoining: ${_isGuide ? "Guide" : "Traveler"}');
+        AppLogger.logInfo('Marked user online when rejoining: ${_isGuide ? "Guide" : "Traveler"}');
         
         _showRejoinedTourSnackBar();
       } else {
@@ -255,20 +256,20 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
         String sessionIdForJournal = _currentSession?.id ?? widget.sessionId;
         String tourInstanceId = widget.booking?.tourInstanceId ?? sessionIdForJournal;
         
-        print('Initializing journal for traveler with sessionId: $sessionIdForJournal, tourInstanceId: $tourInstanceId');
+        AppLogger.logInfo('Initializing journal for traveler with sessionId: $sessionIdForJournal, tourInstanceId: $tourInstanceId');
         
         _tourJournal = await _journalService.getTourJournal(sessionIdForJournal);
         if (_tourJournal == null) {
-          print('No existing journal found, creating new one...');
+          AppLogger.logInfo('No existing journal found, creating new one...');
           _tourJournal = await _journalService.createTourJournal(
             sessionId: sessionIdForJournal,
             tourPlanId: widget.booking?.tourPlanId ?? widget.tourPlan?.id ?? '',
             guideId: widget.tourPlan?.guideId ?? _currentSession?.guideId ?? '',
             travelerId: _currentUserId ?? '',
           );
-          print('Created new journal: ${_tourJournal?.id}');
+          AppLogger.logInfo('Created new journal: ${_tourJournal?.id}');
         } else {
-          print('Found existing journal: ${_tourJournal?.id}');
+          AppLogger.logInfo('Found existing journal: ${_tourJournal?.id}');
         }
       }
       
@@ -290,7 +291,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
         _isInitialized = true;
       });
     } catch (e) {
-      print('Error initializing tour: $e');
+      AppLogger.logInfo('Error initializing tour: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to initialize tour: $e'),
@@ -325,7 +326,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
         }
       }
     } catch (e) {
-      print('Error loading user profiles: $e');
+      AppLogger.logInfo('Error loading user profiles: $e');
     }
   }
 
@@ -360,7 +361,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
           }
         }
       } catch (e) {
-        print('Error fetching tour plan: $e');
+        AppLogger.logInfo('Error fetching tour plan: $e');
       }
     }
   }
@@ -369,28 +370,28 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
   Future<void> _createOrUpdateTourSession() async {
     if (_currentSession == null && widget.booking != null) {
       // Create new session from booking (this should rarely happen now)
-      print('Creating new tour session...');
+      AppLogger.logInfo('Creating new tour session...');
       _currentSession = await _sessionService.createSession(
         bookingId: widget.booking!.id,
         guideId: widget.tourPlan?.guideId ?? '',
         travelerId: widget.booking!.travelerId,
       );
-      print('Created session: ${_currentSession!.id}');
+      AppLogger.logInfo('Created session: ${_currentSession!.id}');
     } else if (_currentSession != null) {
       // Joining existing session (both guide and traveler use this path now)
-      print('Joining existing tour session: ${_currentSession!.id}');
+      AppLogger.logInfo('Joining existing tour session: ${_currentSession!.id}');
       await _sessionService.startSession(_currentSession!.id);
       
       // Mark current user as online when joining existing session
       await _sessionService.markUserOnline(_currentSession!.id, _isGuide);
-      print('Marked current user online: ${_isGuide ? "Guide" : "Traveler"}');
+      AppLogger.logInfo('Marked current user online: ${_isGuide ? "Guide" : "Traveler"}');
     }
     
     // Ensure current user is marked online regardless of how they joined
     if (_currentSession != null) {
-      print('Ensuring current user is online...');
+      AppLogger.logInfo('Ensuring current user is online...');
       await _sessionService.markUserOnline(_currentSession!.id, _isGuide);
-      print('Current user online status confirmed: ${_isGuide ? "Guide" : "Traveler"}');
+      AppLogger.logInfo('Current user online status confirmed: ${_isGuide ? "Guide" : "Traveler"}');
     }
   }
 
@@ -420,7 +421,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
     // Also immediately mark user online when location tracking starts
     if (_currentSession != null) {
       _sessionService.markUserOnline(_currentSession!.id, _isGuide);
-      print('Marked user online when location tracking started: ${_isGuide ? "Guide" : "Traveler"}');
+      AppLogger.logInfo('Marked user online when location tracking started: ${_isGuide ? "Guide" : "Traveler"}');
     }
   }
 
@@ -495,6 +496,9 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
       final isVisited = _visitedPlaces.length > i ? _visitedPlaces[i] : false;
       final isCurrent = i == _currentPlaceIndex;
       
+      // Create custom numbered marker
+      final customIcon = await _createNumberedMarker(i + 1, isVisited, isCurrent);
+      
       newMarkers.add(
         Marker(
           markerId: MarkerId('place_$i'),
@@ -502,15 +506,9 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
             place.location.latitude,
             place.location.longitude,
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            isVisited 
-                ? BitmapDescriptor.hueGreen 
-                : isCurrent 
-                    ? BitmapDescriptor.hueOrange 
-                    : BitmapDescriptor.hueRed,
-          ),
+          icon: customIcon,
           infoWindow: InfoWindow(
-            title: place.name,
+            title: '${i + 1}. ${place.name}',
             snippet: place.description ?? 'Tour location',
           ),
         ),
@@ -523,6 +521,92 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
     
     // Add user location markers
     await _updateUserLocationMarkers();
+  }
+
+  Future<BitmapDescriptor> _createNumberedMarker(int number, bool isVisited, bool isCurrent) async {
+    try {
+      final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+      final Canvas canvas = Canvas(pictureRecorder);
+      
+      // Marker size - smaller than user markers
+      const double size = 40.0;
+      
+      // Determine colors based on status
+      Color backgroundColor;
+      Color textColor = Colors.white;
+      
+      if (isVisited) {
+        backgroundColor = Colors.green;
+      } else if (isCurrent) {
+        backgroundColor = AppColors.primary;
+      } else {
+        backgroundColor = Colors.grey[600]!;
+      }
+      
+      // Draw marker background circle
+      final Paint backgroundPaint = Paint()
+        ..color = backgroundColor
+        ..style = PaintingStyle.fill;
+      
+      canvas.drawCircle(
+        const Offset(size / 2, size / 2),
+        size / 2,
+        backgroundPaint,
+      );
+      
+      // Draw white border
+      final Paint borderPaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+      
+      canvas.drawCircle(
+        const Offset(size / 2, size / 2),
+        size / 2 - 1,
+        borderPaint,
+      );
+      
+      // Draw number text
+      final textSpan = TextSpan(
+        text: number.toString(),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+      
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      );
+      
+      textPainter.layout();
+      
+      // Center the text
+      final textOffset = Offset(
+        (size - textPainter.width) / 2,
+        (size - textPainter.height) / 2,
+      );
+      
+      textPainter.paint(canvas, textOffset);
+      
+      // Convert to bitmap
+      final ui.Picture picture = pictureRecorder.endRecording();
+      final ui.Image markerImage = await picture.toImage(size.toInt(), size.toInt());
+      final ByteData? byteData = await markerImage.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List pngBytes = byteData!.buffer.asUint8List();
+      
+      return BitmapDescriptor.bytes(pngBytes);
+    } catch (e) {
+      AppLogger.logInfo('Error creating numbered marker: $e');
+      // Fallback to default marker
+      return BitmapDescriptor.defaultMarkerWithHue(
+        isVisited ? BitmapDescriptor.hueGreen : 
+        isCurrent ? BitmapDescriptor.hueOrange : 
+        BitmapDescriptor.hueRed,
+      );
+    }
   }
 
   Future<void> _updateUserLocationMarkers() async {
@@ -599,7 +683,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
         ),
       );
     } catch (e) {
-      print('Error creating user marker: $e');
+      AppLogger.logInfo('Error creating user marker: $e');
       return null;
     }
   }
@@ -620,9 +704,9 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
       final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
       final Canvas canvas = Canvas(pictureRecorder);
       
-      // Marker size
-      const double size = 120.0;
-      const double imageSize = 80.0;
+      // Marker size - REDUCED from 120.0 to 60.0
+      const double size = 60.0;
+      const double imageSize = 40.0;
       
       // Draw marker background circle
       final Paint backgroundPaint = Paint()
@@ -681,9 +765,9 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
       final ByteData? byteData = await markerImage.toByteData(format: ui.ImageByteFormat.png);
       final Uint8List pngBytes = byteData!.buffer.asUint8List();
       
-      return BitmapDescriptor.fromBytes(pngBytes);
+      return BitmapDescriptor.bytes(pngBytes);
     } catch (e) {
-      print('Error creating profile image marker: $e');
+      AppLogger.logInfo('Error creating profile image marker: $e');
       // Fallback to person icon marker instead of generic marker
       return await _createPersonIconMarker(isGuide, isCurrentUser);
     }
@@ -695,15 +779,15 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
       final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
       final Canvas canvas = Canvas(pictureRecorder);
       
-      // Marker size
-      const double size = 120.0;
-      const double iconSize = 60.0;
+      // Marker size - REDUCED from 120.0 to 60.0
+      const double size = 60.0;
+      const double iconSize = 30.0;
       
       // Draw marker background circle
       final Paint backgroundPaint = Paint()
         ..color = isCurrentUser 
             ? (isGuide ? AppColors.guide : AppColors.primary)
-            : (isGuide ? AppColors.guide.withOpacity(0.7) : AppColors.primary.withOpacity(0.7))
+            : (isGuide ? AppColors.guide.withValues(alpha: 0.7) : AppColors.primary.withValues(alpha: 0.7))
         ..style = PaintingStyle.fill;
       
       canvas.drawCircle(
@@ -719,7 +803,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
       
       canvas.drawCircle(
         const Offset(size / 2, size / 2),
-        (iconSize / 2) + 8,
+        (iconSize / 2) + 6,
         innerPaint,
       );
       
@@ -728,21 +812,21 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
         ..color = isGuide ? AppColors.guide : AppColors.primary
         ..style = PaintingStyle.fill;
       
-      // Draw person head (circle)
+      // Draw person head (circle) - SMALLER
       canvas.drawCircle(
-        const Offset(size / 2, size / 2 - 8),
-        12,
+        const Offset(size / 2, size / 2 - 6),
+        8,
         iconPaint,
       );
       
-      // Draw person body (rounded rectangle)
+      // Draw person body (rounded rectangle) - SMALLER
       final RRect bodyRect = RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: const Offset(size / 2, size / 2 + 12),
-          width: 24,
-          height: 20,
+          center: const Offset(size / 2, size / 2 + 8),
+          width: 16,
+          height: 14,
         ),
-        const Radius.circular(12),
+        const Radius.circular(8),
       );
       canvas.drawRRect(bodyRect, iconPaint);
       
@@ -752,11 +836,11 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
             ? (isGuide ? AppColors.guide : AppColors.primary)
             : Colors.grey[600]!
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3;
+        ..strokeWidth = 2;
       
       canvas.drawCircle(
         const Offset(size / 2, size / 2),
-        size / 2 - 1.5,
+        size / 2 - 1,
         borderPaint,
       );
       
@@ -766,9 +850,9 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
       final ByteData? byteData = await markerImage.toByteData(format: ui.ImageByteFormat.png);
       final Uint8List pngBytes = byteData!.buffer.asUint8List();
       
-      return BitmapDescriptor.fromBytes(pngBytes);
+      return BitmapDescriptor.bytes(pngBytes);
     } catch (e) {
-      print('Error creating person icon marker: $e');
+      AppLogger.logInfo('Error creating person icon marker: $e');
       // Final fallback to default marker
       return BitmapDescriptor.defaultMarkerWithHue(
         isGuide ? BitmapDescriptor.hueBlue : BitmapDescriptor.hueViolet,
@@ -804,7 +888,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
         _updateRoutePolylines();
       }
     } catch (e) {
-      print('Error updating directions: $e');
+      AppLogger.logInfo('Error updating directions: $e');
     }
   }
 
@@ -851,7 +935,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
       if (allPlacesVisited) {
         // Complete the tour when all places are visited
         await _sessionService.completeTour(_currentSession!.id);
-        print('Tour completed - all places visited');
+        AppLogger.logInfo('Tour completed - all places visited');
       }
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -862,7 +946,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
         ),
       );
     } catch (e) {
-      print('Error marking place as visited: $e');
+      AppLogger.logInfo('Error marking place as visited: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to mark place as visited: $e'),
@@ -894,7 +978,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
       // Navigate back
       Navigator.of(context).pop();
     } catch (e) {
-      print('Error exiting tour: $e');
+      AppLogger.logInfo('Error exiting tour: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error exiting tour: $e'),
@@ -1207,7 +1291,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
                   FloatingActionButton(
                     heroTag: "view_places",
                     mini: true,
-                    backgroundColor: AppColors.primary.withOpacity(0.9),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.9),
                     onPressed: () => _showPlacesOverview(),
                     child: const Icon(Icons.list, color: Colors.white),
                   ),
@@ -1371,7 +1455,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -1405,7 +1489,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: isCurrent ? AppColors.primary.withOpacity(0.1) : Colors.white,
+                      color: isCurrent ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isCurrent ? AppColors.primary : Colors.grey[300]!,
@@ -1466,10 +1550,10 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: isVisited 
-                                  ? Colors.green.withOpacity(0.2)
+                                  ? Colors.green.withValues(alpha: 0.2)
                                   : isCurrent 
-                                      ? AppColors.primary.withOpacity(0.2)
-                                      : Colors.grey.withOpacity(0.2),
+                                      ? AppColors.primary.withValues(alpha: 0.2)
+                                      : Colors.grey.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -1578,7 +1662,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     color: Colors.white,
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
                     image: place.photoUrl != null
                         ? DecorationImage(
                             image: NetworkImage(place.photoUrl!),
@@ -1643,11 +1727,11 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
   Widget _buildJournalEntryForm(Place place) {
     return StatefulBuilder(
       builder: (context, setJournalState) {
-        final ImagePicker _picker = ImagePicker();
+        final ImagePicker picker = ImagePicker();
         
-        Future<void> _pickImage() async {
+        Future<void> pickImage() async {
           try {
-            final XFile? image = await _picker.pickImage(
+            final XFile? image = await picker.pickImage(
               source: ImageSource.gallery,
               maxWidth: 1024,
               maxHeight: 1024,
@@ -1669,9 +1753,9 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
           }
         }
 
-        Future<void> _takePhoto() async {
+        Future<void> takePhoto() async {
           try {
-            final XFile? image = await _picker.pickImage(
+            final XFile? image = await picker.pickImage(
               source: ImageSource.camera,
               maxWidth: 1024,
               maxHeight: 1024,
@@ -1693,7 +1777,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
         }
       }
 
-        Future<String?> _uploadImage(File imageFile) async {
+        Future<String?> uploadImage(File imageFile) async {
           try {
             setState(() {
               _isUploadingJournalImage = true;
@@ -1726,7 +1810,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
           }
         }
 
-        void _showImageSourceDialog() {
+        void showImageSourceDialog() {
           showModalBottomSheet(
       context: context,
             shape: const RoundedRectangleBorder(
@@ -1751,7 +1835,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
                         child: ElevatedButton.icon(
             onPressed: () {
                             Navigator.pop(context);
-                            _takePhoto();
+                            takePhoto();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -1770,7 +1854,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
                         child: ElevatedButton.icon(
                           onPressed: () {
                             Navigator.pop(context);
-                            _pickImage();
+                            pickImage();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
@@ -1934,7 +2018,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
               Container(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: _isUploadingJournalImage ? null : _showImageSourceDialog,
+                  onPressed: _isUploadingJournalImage ? null : showImageSourceDialog,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -2003,7 +2087,7 @@ class _ActiveTourMapScreenState extends State<ActiveTourMapScreen> with TickerPr
 
                           String? photoUrl;
                           if (_selectedJournalImage != null) {
-                            photoUrl = await _uploadImage(_selectedJournalImage!);
+                            photoUrl = await uploadImage(_selectedJournalImage!);
                             if (photoUrl == null) {
                               // Upload failed, don't proceed
                               return;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/ui_constants.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -128,11 +128,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     
                     // Mode Toggle - The main feature for switching between traveler and guide modes
                     _buildGuideModeToggle(context, user.isGuide),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Quick Actions
-                    _buildQuickActions(context),
                     
                     const SizedBox(height: 32),
                     
@@ -376,18 +371,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    return Column(
-      children: [
-        _buildActionButton('Settings', Icons.settings, () => _handleMenuAction(context, 'settings')),
-        const SizedBox(height: 12),
-        _buildActionButton('Help & Support', Icons.help_outline, () => _handleMenuAction(context, 'help')),
-        const SizedBox(height: 12),
-        _buildActionButton('Privacy Policy', Icons.privacy_tip_outlined, () => _handleMenuAction(context, 'privacy')),
-      ],
-    );
-  }
-
   Widget _buildActionButton(String title, IconData icon, VoidCallback onTap, {bool isDestructive = false}) {
     return Container(
       width: double.infinity,
@@ -420,29 +403,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: AppColors.textSecondary,
         ),
         onTap: onTap,
-      ),
-    );
-  }
-
-  void _handleMenuAction(BuildContext context, String action) {
-    switch (action) {
-      case 'settings':
-        _showComingSoon(context, 'Settings');
-        break;
-      case 'help':
-        _showComingSoon(context, 'Help & Support');
-        break;
-      case 'privacy':
-        _showComingSoon(context, 'Privacy Policy');
-        break;
-    }
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature coming soon!'),
-        backgroundColor: AppColors.primary,
       ),
     );
   }

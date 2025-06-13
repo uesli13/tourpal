@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/available_time.dart';
+import '../utils/logger.dart';
 
 class GuideAvailabilityService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -81,7 +82,7 @@ class GuideAvailabilityService {
       
       return availableSlots;
     } catch (e) {
-      print('Error getting available time slots: $e');
+      AppLogger.logInfo('Error getting available time slots: $e');
       return [];
     }
   }
@@ -116,7 +117,7 @@ class GuideAvailabilityService {
       
       return bookedSlots;
     } catch (e) {
-      print('Error getting booked slots: $e');
+      AppLogger.logInfo('Error getting booked slots: $e');
       return [];
     }
   }
@@ -148,7 +149,7 @@ class GuideAvailabilityService {
       
       return availability;
     } catch (e) {
-      print('Error getting guide weekly schedule: $e');
+      AppLogger.logInfo('Error getting guide weekly schedule: $e');
       return [];
     }
   }

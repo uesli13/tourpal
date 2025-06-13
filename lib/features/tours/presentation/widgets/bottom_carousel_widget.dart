@@ -160,7 +160,7 @@ class _BottomCarouselWidgetState extends State<BottomCarouselWidget> with Ticker
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -241,7 +241,7 @@ class _BottomCarouselWidgetState extends State<BottomCarouselWidget> with Ticker
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -321,9 +321,9 @@ class _BottomCarouselWidgetState extends State<BottomCarouselWidget> with Ticker
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -412,9 +412,9 @@ class _BottomCarouselWidgetState extends State<BottomCarouselWidget> with Ticker
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _getStatusColor(status).withOpacity(0.1),
+          color: _getStatusColor(status).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _getStatusColor(status).withOpacity(0.3)),
+          border: Border.all(color: _getStatusColor(status).withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -544,7 +544,7 @@ class _BottomCarouselWidgetState extends State<BottomCarouselWidget> with Ticker
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(status).withOpacity(0.2),
+                        color: _getStatusColor(status).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(

@@ -175,7 +175,7 @@ class _GuideBookingsScreenState extends State<GuideBookingsScreen>
           Icon(
             Icons.schedule,
             size: 80,
-            color: AppColors.guide.withOpacity(0.3),
+            color: AppColors.guide.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
@@ -183,7 +183,7 @@ class _GuideBookingsScreenState extends State<GuideBookingsScreen>
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary.withOpacity(0.7),
+              color: AppColors.textPrimary.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 8),
@@ -237,7 +237,7 @@ class _GuideBookingsScreenState extends State<GuideBookingsScreen>
             Icon(
               emptyIcon,
               size: 64,
-              color: AppColors.guide.withOpacity(0.3),
+              color: AppColors.guide.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
             Text(

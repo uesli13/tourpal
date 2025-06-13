@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/utils/logger.dart';
 import '../../../models/tour_session.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -54,7 +55,7 @@ class TourSessionService {
     };
     
     final docRef = await _firestore.collection('tourSessions').add(sessionData);
-    print('Created session via createSession with creator online: ${isCreatorGuide ? "Guide" : "Traveler"}');
+    AppLogger.logInfo('Created session via createSession with creator online: ${isCreatorGuide ? "Guide" : "Traveler"}');
     return TourSession.fromMap(sessionData, docRef.id);
   }
 
@@ -105,7 +106,7 @@ class TourSessionService {
 
       return session;
     } catch (e) {
-      print('Error creating tour session: $e');
+      AppLogger.logInfo('Error creating tour session: $e');
       throw Exception('Failed to create tour session: $e');
     }
   }
@@ -156,7 +157,7 @@ class TourSessionService {
       });
       
     } catch (e) {
-      print('Error starting tour as guide: $e');
+      AppLogger.logInfo('Error starting tour as guide: $e');
       throw Exception('Failed to start tour as guide: $e');
     }
   }
@@ -197,7 +198,7 @@ class TourSessionService {
       });
       
     } catch (e) {
-      print('Error confirming traveler ready: $e');
+      AppLogger.logInfo('Error confirming traveler ready: $e');
       throw Exception('Failed to confirm traveler ready: $e');
     }
   }
@@ -239,7 +240,7 @@ class TourSessionService {
 
       return session;
     } catch (e) {
-      print('Error rejoining tour session: $e');
+      AppLogger.logInfo('Error rejoining tour session: $e');
       throw Exception('Failed to rejoin tour session: $e');
     }
   }
@@ -267,7 +268,7 @@ class TourSessionService {
           .doc(sessionId)
           .update(updateData);
     } catch (e) {
-      print('Error marking user online: $e');
+      AppLogger.logInfo('Error marking user online: $e');
     }
   }
 
@@ -293,7 +294,7 @@ class TourSessionService {
           .doc(sessionId)
           .update(updateData);
     } catch (e) {
-      print('Error marking user offline: $e');
+      AppLogger.logInfo('Error marking user offline: $e');
     }
   }
 
@@ -310,7 +311,7 @@ class TourSessionService {
         'lastHeartbeat.$currentUserId': Timestamp.now(),
       });
     } catch (e) {
-      print('Error sending heartbeat: $e');
+      AppLogger.logInfo('Error sending heartbeat: $e');
     }
   }
 
@@ -340,7 +341,7 @@ class TourSessionService {
         'lastHeartbeat.$currentUserId': Timestamp.now(),
       });
     } catch (e) {
-      print('Error updating user location: $e');
+      AppLogger.logInfo('Error updating user location: $e');
     }
   }
 
@@ -372,7 +373,7 @@ class TourSessionService {
         });
       }
     } catch (e) {
-      print('Error marking place as visited: $e');
+      AppLogger.logInfo('Error marking place as visited: $e');
       throw Exception('Failed to mark place as visited: $e');
     }
   }
@@ -388,7 +389,7 @@ class TourSessionService {
         'metadata.currentPlaceUpdatedAt': Timestamp.now(),
       });
     } catch (e) {
-      print('Error updating current place: $e');
+      AppLogger.logInfo('Error updating current place: $e');
       throw Exception('Failed to update current place: $e');
     }
   }
@@ -425,7 +426,7 @@ class TourSessionService {
             'status': 'completed',
             'completedAt': Timestamp.now(),
     });
-          print('Updated booking status to completed: $bookingId');
+          AppLogger.logInfo('Updated booking status to completed: $bookingId');
   }
 
         // Complete the associated tour journal
@@ -445,17 +446,17 @@ class TourSessionService {
               'isCompleted': true,
       'updatedAt': Timestamp.now(),
     });
-            print('Completed tour journal: ${journalDoc.id}');
+            AppLogger.logInfo('Completed tour journal: ${journalDoc.id}');
           }
         } catch (e) {
-          print('Error completing tour journal: $e');
+          AppLogger.logInfo('Error completing tour journal: $e');
           // Don't fail the tour completion if journal update fails
         }
         
-        print('Tour completed successfully: $sessionId');
+        AppLogger.logInfo('Tour completed successfully: $sessionId');
       }
     } catch (e) {
-      print('Error completing tour: $e');
+      AppLogger.logInfo('Error completing tour: $e');
       throw Exception('Failed to complete tour: $e');
     }
   }
@@ -472,7 +473,7 @@ class TourSessionService {
         'metadata.pausedBy': _auth.currentUser?.uid,
     });
     } catch (e) {
-      print('Error pausing tour session: $e');
+      AppLogger.logInfo('Error pausing tour session: $e');
       throw Exception('Failed to pause tour session: $e');
     }
   }
@@ -488,7 +489,7 @@ class TourSessionService {
         'metadata.resumedBy': _auth.currentUser?.uid,
     });
     } catch (e) {
-      print('Error resuming tour session: $e');
+      AppLogger.logInfo('Error resuming tour session: $e');
       throw Exception('Failed to resume tour session: $e');
     }
   }
@@ -505,7 +506,7 @@ class TourSessionService {
         'metadata.completedBy': _auth.currentUser?.uid,
     });
     } catch (e) {
-      print('Error completing tour session: $e');
+      AppLogger.logInfo('Error completing tour session: $e');
       throw Exception('Failed to complete tour session: $e');
     }
   }
@@ -523,7 +524,7 @@ class TourSessionService {
       }
       return null;
     } catch (e) {
-      print('Error getting tour session: $e');
+      AppLogger.logInfo('Error getting tour session: $e');
       return null;
     }
   }
@@ -539,13 +540,13 @@ class TourSessionService {
         try {
           return TourSession.fromMap(doc.data()!);
         } catch (e) {
-          print('Error parsing tour session: $e');
+          AppLogger.logInfo('Error parsing tour session: $e');
           return null;
         }
       }
       return null;
     }).handleError((error) {
-      print('Error listening to tour session: $error');
+      AppLogger.logInfo('Error listening to tour session: $error');
       return null;
     });
   }
@@ -583,7 +584,7 @@ class TourSessionService {
 
       return sessions;
     } catch (e) {
-      print('Error getting active sessions: $e');
+      AppLogger.logInfo('Error getting active sessions: $e');
       return [];
   }
   }
@@ -605,7 +606,7 @@ class TourSessionService {
       // Check if user is part of this session
       return session.guideId == userId || session.travelerId == userId;
     } catch (e) {
-      print('Error checking rejoin eligibility: $e');
+      AppLogger.logInfo('Error checking rejoin eligibility: $e');
       return false;
     }
   }
@@ -634,7 +635,7 @@ class TourSessionService {
 
       await batch.commit();
     } catch (e) {
-      print('Error cleaning up inactive sessions: $e');
+      AppLogger.logInfo('Error cleaning up inactive sessions: $e');
     }
   }
 
@@ -646,7 +647,7 @@ class TourSessionService {
       
       return session.guideId == userId || session.travelerId == userId;
     } catch (e) {
-      print('Error validating session access: $e');
+      AppLogger.logInfo('Error validating session access: $e');
       return false;
     }
   }
@@ -675,7 +676,7 @@ class TourSessionService {
 
       return stats;
     } catch (e) {
-      print('Error getting session statistics: $e');
+      AppLogger.logInfo('Error getting session statistics: $e');
       return {};
     }
   }

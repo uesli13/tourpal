@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:tourpal/features/tours/domain/repositories/user_location_repository.dart';
-import '../../../../models/user_location.dart' as UserLocationModel;
+import '../../domain/repositories/user_location_repository.dart';
 
 class UserLocationRepositoryImpl implements UserLocationRepository {
   final FirebaseFirestore _firestore;
@@ -95,7 +94,7 @@ class UserLocationRepositoryImpl implements UserLocationRepository {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => UserLocation.fromMap(doc.data()!))
+          .map((doc) => UserLocation.fromMap(doc.data()))
           .toList();
     });
   }

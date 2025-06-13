@@ -4,8 +4,8 @@ import 'package:tourpal/core/utils/logger.dart';
 import 'package:tourpal/core/utils/bloc_error_handler.dart';
 import 'package:tourpal/core/exceptions/app_exceptions.dart';
 import 'package:tourpal/models/tour_plan.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../../auth/services/auth_service.dart';
 import '../../domain/usecases/get_tours_usecase.dart';
 import '../../domain/usecases/update_tour_usecase.dart';
 import 'tour_event.dart';
@@ -14,15 +14,12 @@ import 'tour_state.dart';
 class TourBloc extends Bloc<TourEvent, TourState> {
   final GetToursUsecase _getToursUsecase;
   final UpdateTourUsecase _updateTourUsecase;
-  final AuthService _authService;
 
   TourBloc({
     required GetToursUsecase getToursUsecase,
     required UpdateTourUsecase updateTourUsecase,
-    required AuthService authService,
   })  : _getToursUsecase = getToursUsecase,
         _updateTourUsecase = updateTourUsecase,
-        _authService = authService,
         super(const TourInitial()) {
     
     AppLogger.info('TourBloc initialized with Clean Architecture usecases');
@@ -63,7 +60,7 @@ class TourBloc extends Bloc<TourEvent, TourState> {
       operation: () async {
         emit(const TourLoading());
         
-        final currentUser = _authService.currentUser;
+        final currentUser = FirebaseAuth.instance.currentUser;
         if (currentUser == null) {
           throw const AuthenticationException('User not authenticated');
         }
@@ -115,7 +112,7 @@ class TourBloc extends Bloc<TourEvent, TourState> {
       },
       onSuccess: (tours) {
         // Filter out current user's tours for explore screen
-        final currentUser = _authService.currentUser;
+        final currentUser = FirebaseAuth.instance.currentUser;
         final filteredTours = currentUser != null 
             ? tours.where((tour) => tour.guideId != currentUser.uid).toList()
             : tours;
@@ -176,7 +173,7 @@ class TourBloc extends Bloc<TourEvent, TourState> {
           ));
         } else {
           // Refresh all published tours for explore screen
-          final currentUser = _authService.currentUser;
+          final currentUser = FirebaseAuth.instance.currentUser;
           final filteredTours = currentUser != null 
               ? tours.where((tour) => tour.guideId != currentUser.uid).toList()
               : tours;

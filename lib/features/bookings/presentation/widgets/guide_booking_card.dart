@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../models/booking.dart';
 import '../../../../models/tour_plan.dart';
 import '../../../../models/user.dart';
@@ -37,7 +38,7 @@ class GuideBookingCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               Colors.white,
-              AppColors.backgroundLight.withOpacity(0.3),
+              AppColors.backgroundLight.withValues(alpha: 0.3),
             ],
           ),
         ),
@@ -47,7 +48,7 @@ class GuideBookingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _getStatusColor(booking.status).withOpacity(0.1),
+                color: _getStatusColor(booking.status).withValues(alpha: 0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -63,9 +64,9 @@ class GuideBookingCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -207,7 +208,7 @@ class GuideBookingCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.surface,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.outline.withOpacity(0.3)),
+                            border: Border.all(color: AppColors.outline.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
@@ -216,7 +217,7 @@ class GuideBookingCard extends StatelessWidget {
                                 backgroundImage: traveler.hasProfileImage
                                     ? NetworkImage(traveler.profileImageUrl!)
                                     : null,
-                                backgroundColor: AppColors.primary.withOpacity(0.1),
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                                 child: !traveler.hasProfileImage
                                     ? Icon(Icons.person, color: AppColors.primary, size: 20)
                                     : null,
@@ -259,7 +260,7 @@ class GuideBookingCard extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 20,
-                              backgroundColor: AppColors.primary.withOpacity(0.1),
+                              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                               child: Icon(Icons.person, color: AppColors.primary, size: 20),
                             ),
                             const SizedBox(width: 12),
@@ -407,7 +408,7 @@ class GuideBookingCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: statusInfo['color'].withOpacity(0.3),
+            color: statusInfo['color'].withValues(alpha: 0.3),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -549,7 +550,7 @@ class GuideBookingCard extends StatelessWidget {
         return TourPlan.fromMap(doc.data()!, doc.id);
       }
     } catch (e) {
-      print('Error fetching tour plan: $e');
+      AppLogger.logInfo('Error fetching tour plan: $e');
     }
     return null;
   }
@@ -565,7 +566,7 @@ class GuideBookingCard extends StatelessWidget {
         return User.fromMap(doc.data()!, doc.id);
       }
     } catch (e) {
-      print('Error fetching traveler: $e');
+      AppLogger.logInfo('Error fetching traveler: $e');
     }
     return null;
   }

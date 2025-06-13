@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../tours/presentation/screens/active_tour_map_screen.dart';
@@ -51,7 +52,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading dashboard data: $e');
+      AppLogger.logInfo('Error loading dashboard data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -73,7 +74,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         _activeTourSession = TourSession.fromMap(sessionData, sessionsQuery.docs.first.id);
       }
     } catch (e) {
-      print('Error loading active tour session: $e');
+      AppLogger.logInfo('Error loading active tour session: $e');
     }
   }
 
@@ -90,7 +91,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           .map((doc) => Booking.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
-      print('Error loading recent bookings: $e');
+      AppLogger.logInfo('Error loading recent bookings: $e');
     }
   }
 
@@ -151,14 +152,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         gradient: LinearGradient(
           colors: isActive 
               ? [Colors.green.shade400, Colors.green.shade600]
-              : [AppColors.primary.withOpacity(0.8), AppColors.primary],
+              : [AppColors.primary.withValues(alpha: 0.8), AppColors.primary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: (isActive ? Colors.green : AppColors.primary).withOpacity(0.3),
+            color: (isActive ? Colors.green : AppColors.primary).withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -386,9 +387,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
@@ -486,7 +487,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _getStatusColor(booking.status).withOpacity(0.2),
+              color: _getStatusColor(booking.status).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(

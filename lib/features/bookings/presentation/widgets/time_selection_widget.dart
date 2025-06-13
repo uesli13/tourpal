@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tourpal/core/constants/app_colors.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../core/services/guide_availability_service.dart';
 
 class TimeSelectionWidget extends StatefulWidget {
@@ -59,7 +60,7 @@ class _TimeSelectionWidgetState extends State<TimeSelectionWidget> {
         _availableTimes = [];
         _loadingTimes = false;
       });
-      print('Error loading available times: $e');
+      AppLogger.logInfo('Error loading available times: $e');
     }
   }
 

@@ -63,7 +63,7 @@ class _CreateTourScreenState extends State<CreateTourScreen>
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false, // Prevent default back behavior
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         
         // Show draft save dialog when back button is pressed

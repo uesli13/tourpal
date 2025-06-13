@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../models/tour_plan.dart';
 import '../../../../models/user.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -97,7 +98,7 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
         });
       }
     } catch (e) {
-      print('Error loading guide data: $e');
+      AppLogger.logInfo('Error loading guide data: $e');
       setState(() {
         isLoadingGuide = false;
       });
@@ -159,7 +160,7 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -460,7 +461,7 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(icon, color: color, size: 20),
@@ -476,7 +477,7 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -489,7 +490,7 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
             backgroundImage: _guide!.hasProfileImage
                 ? NetworkImage(_guide!.profileImageUrl!)
                 : null,
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
             child: !_guide!.hasProfileImage
                 ? const Icon(Icons.person, color: AppColors.primary)
                 : null,
@@ -528,7 +529,7 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: Colors.green.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -629,7 +630,7 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withOpacity(0.1),
+                  color: AppColors.primaryLight.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.event_note, color: AppColors.primary, size: 20),
@@ -775,7 +776,7 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
         title: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
+            color: Colors.green.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -804,9 +805,9 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.withOpacity(0.3)),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -862,7 +863,7 @@ class _BookTourWidgetState extends State<BookTourWidget> with TickerProviderStat
         title: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.1),
+            color: Colors.red.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../core/services/guide_availability_service.dart';
 import '../../../../models/available_time.dart';
 
@@ -46,7 +47,7 @@ class _AvailabilityCalendarWidgetState extends State<AvailabilityCalendarWidget>
       setState(() {
         _loadingSchedule = false;
       });
-      print('Error loading guide schedule: $e');
+      AppLogger.logInfo('Error loading guide schedule: $e');
     }
   }
 
@@ -115,7 +116,7 @@ class _AvailabilityCalendarWidgetState extends State<AvailabilityCalendarWidget>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
@@ -189,7 +190,7 @@ class _AvailabilityCalendarWidgetState extends State<AvailabilityCalendarWidget>
                   fontWeight: FontWeight.bold,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 

@@ -104,7 +104,7 @@ class _TourBottomCarouselState extends State<TourBottomCarousel>
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 10,
                 spreadRadius: 2,
                 offset: const Offset(0, -2),
@@ -300,7 +300,7 @@ class _TourBottomCarouselState extends State<TourBottomCarousel>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -371,7 +371,7 @@ class _TourBottomCarouselState extends State<TourBottomCarousel>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isCurrent 
-            ? AppColors.primary.withOpacity(0.05)
+            ? AppColors.primary.withValues(alpha: 0.05)
             : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
@@ -390,7 +390,7 @@ class _TourBottomCarouselState extends State<TourBottomCarousel>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(isVisited, isCurrent, isPast).withOpacity(0.1),
+                  color: _getStatusColor(isVisited, isCurrent, isPast).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -450,7 +450,7 @@ class _TourBottomCarouselState extends State<TourBottomCarousel>
               child: Icon(
                 Icons.place,
                 size: 48,
-                color: AppColors.primary.withOpacity(0.5),
+                color: AppColors.primary.withValues(alpha: 0.5),
               ),
             ),
           

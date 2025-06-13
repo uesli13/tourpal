@@ -70,7 +70,7 @@ class _GuideControlsWidgetState extends State<GuideControlsWidget> with TickerPr
           borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 25,
               offset: const Offset(0, 4),
           ),
@@ -96,7 +96,7 @@ class _GuideControlsWidgetState extends State<GuideControlsWidget> with TickerPr
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.guide.withOpacity(0.1),
+        color: AppColors.guide.withValues(alpha: 0.1),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Row(
@@ -237,7 +237,7 @@ class _GuideControlsWidgetState extends State<GuideControlsWidget> with TickerPr
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: Colors.white,
-                  border: Border.all(color: AppColors.guide.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.guide.withValues(alpha: 0.3)),
                   image: currentPlace.photoUrl != null
                       ? DecorationImage(
                           image: NetworkImage(currentPlace.photoUrl!),
@@ -282,7 +282,7 @@ class _GuideControlsWidgetState extends State<GuideControlsWidget> with TickerPr
                         Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                  color: isCurrentPlaceVisited ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                  color: isCurrentPlaceVisited ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isCurrentPlaceVisited ? Colors.green : Colors.orange,
@@ -346,7 +346,7 @@ class _GuideControlsWidgetState extends State<GuideControlsWidget> with TickerPr
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.green, width: 2),
                     ),
@@ -452,7 +452,7 @@ class _GuideControlsWidgetState extends State<GuideControlsWidget> with TickerPr
             IconButton(
               onPressed: () => widget.onPlaceChanged(widget.currentPlaceIndex + 1),
               style: IconButton.styleFrom(
-                backgroundColor: AppColors.guide.withOpacity(0.2),
+                backgroundColor: AppColors.guide.withValues(alpha: 0.2),
                 foregroundColor: AppColors.guide,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),

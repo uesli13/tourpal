@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
 
 class LocationPermissionWidget extends StatelessWidget {
   final bool hasPermission;
@@ -16,7 +15,7 @@ class LocationPermissionWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: hasPermission ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+        color: hasPermission ? Colors.green.withValues(alpha: .1) : Colors.orange.withValues(alpha: .1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: hasPermission ? Colors.green : Colors.orange,

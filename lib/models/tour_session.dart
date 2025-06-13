@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/utils/logger.dart';
+
 enum TourSessionStatus {
   scheduled,
   waitingForTraveler, // New status for confirmation flow
@@ -101,7 +103,7 @@ class TourSession {
         metadata: Map<String, dynamic>.from(map['metadata'] ?? {}),
       );
     } catch (e) {
-      print('Error parsing TourSession from map: $e');
+      AppLogger.logInfo('Error parsing TourSession from map: $e');
       // Return a minimal valid session to prevent crashes
       return TourSession(
         id: documentId ?? map['id'] ?? '',
@@ -170,7 +172,7 @@ class TourSession {
       
       return {};
     } catch (e) {
-      print('Error parsing heartbeat: $e');
+      AppLogger.logInfo('Error parsing heartbeat: $e');
       return {};
     }
   }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../dashboard/presentation/screens/explore_screen.dart';
+import '../../../dashboard/presentation/screens/guide_dashboard_screen.dart';
+import '../../../dashboard/presentation/screens/guide_schedule_screen.dart';
 import '../../../dashboard/presentation/screens/main_dashboard_screen.dart';
-import '../../../explore/presentation/screens/explore_screen.dart';
+import '../../../dashboard/presentation/screens/my_tours_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
-import '../../../guide/presentation/screens/guide_dashboard_screen.dart';
-import '../../../guide/presentation/screens/my_tours_screen.dart';
-import '../../../guide/presentation/screens/guide_schedule_screen.dart';
 import '../../../bookings/presentation/screens/my_bookings_screen.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';

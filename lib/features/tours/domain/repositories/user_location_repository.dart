@@ -167,7 +167,7 @@ class FirebaseUserLocationRepository implements UserLocationRepository {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => UserLocation.fromMap(doc.data()!))
+          .map((doc) => UserLocation.fromMap(doc.data()))
           .toList();
     });
   }

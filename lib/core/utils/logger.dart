@@ -26,11 +26,6 @@ class AppLogger {
       name: _appName,
       error: data is Exception ? data : null,
     );
-    
-    // In production, you might want to send critical errors to a monitoring service
-    // if (level == '🚨 CRITICAL' && !kDebugMode) {
-    //   FirebaseCrashlytics.instance.recordError(message, null);
-    // }
   }
   
   static void debug(String message, [dynamic data]) {
@@ -110,5 +105,35 @@ class AppLogger {
   static void storage(String operation, String path, [int? fileSize]) {
     final sizeStr = fileSize != null ? ' (${(fileSize / 1024).toStringAsFixed(1)}KB)' : '';
     _log('📁 STORAGE', '$operation: $path$sizeStr');
+  }
+
+  /// Production-safe info logging (replaces print statements)
+  static void logInfo(String message, [Map<String, dynamic>? context]) {
+    dev.log(
+      message,
+      name: 'TourPal',
+      level: 800,
+      sequenceNumber: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  /// Production-safe debug logging
+  static void logDebug(String message, [Map<String, dynamic>? context]) {
+    dev.log(
+      message,
+      name: 'TourPal-Debug',
+      level: 700,
+      sequenceNumber: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  /// Production-safe warning logging
+  static void logWarning(String message, [Map<String, dynamic>? context]) {
+    dev.log(
+      message,
+      name: 'TourPal-Warning',
+      level: 900,
+      sequenceNumber: DateTime.now().millisecondsSinceEpoch,
+    );
   }
 }

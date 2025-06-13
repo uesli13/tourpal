@@ -7,7 +7,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/services/google_places_service.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../models/place_suggestion_with_photo.dart';
+import '../../../../models/place_suggestion.dart';
+import '../../../../core/utils/logger.dart';
 
 class AddPlaceScreen extends StatefulWidget {
   const AddPlaceScreen({super.key});
@@ -35,7 +36,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   LatLng? _selectedLocation;
   String _selectedAddress = '';
   bool _isSearching = false;
-  List<PlaceSuggestionWithPhoto> _searchResults = []; // Enhanced to include photos
+  List<PlaceSuggestion> _searchResults = []; // Enhanced to include photos
   PlaceDetails? _selectedPlaceDetails;
   String? _selectedPhotoUrl;
   Timer? _searchTimer;
@@ -76,8 +77,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       if (!permissionStatus.isGranted) return;
 
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        // DEPRECATED: desiredAccuracy: LocationAccuracy.high,
+        // DEPRECATED: timeLimit: const Duration(seconds: 10),
       );
 
       setState(() {
@@ -96,7 +97,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   }
 
   Future<void> _searchPlaces(String query) async {
-    print('🔍 Search called with query: "$query"');
+    AppLogger.logInfo('🔍 Search called with query: "$query"');
     
     if (query.isEmpty) {
       setState(() {
@@ -121,12 +122,12 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
 
     try {
       final service = GooglePlacesService();
-      print('🌐 Making API call...');
+      AppLogger.logInfo('🌐 Making API call...');
       final results = await service.fetchPlacePredictions(query);
-      print('📍 Got ${results.length} results');
+      AppLogger.logInfo('📍 Got ${results.length} results');
       
       // Enhance results with photos
-      final enhancedResults = <PlaceSuggestionWithPhoto>[];
+      final enhancedResults = <PlaceSuggestion>[];
       
       for (final result in results) {
         try {
@@ -141,14 +142,14 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
             );
           }
           
-          enhancedResults.add(PlaceSuggestionWithPhoto(
+          enhancedResults.add(PlaceSuggestion(
             suggestion: result,
             thumbnailUrl: thumbnailUrl,
             placeDetails: placeDetails,
           ));
         } catch (e) {
           // If photo fetch fails, add without photo
-          enhancedResults.add(PlaceSuggestionWithPhoto(
+          enhancedResults.add(PlaceSuggestion(
             suggestion: result,
             thumbnailUrl: null,
             placeDetails: null,
@@ -163,7 +164,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         });
       }
     } catch (e) {
-      print('❌ Error searching places: $e');
+      AppLogger.logInfo('❌ Error searching places: $e');
       if (mounted) {
         setState(() {
           _isSearching = false;
@@ -181,7 +182,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     }
   }
 
-  Future<void> _selectPlace(PlaceSuggestionWithPhoto enhancedPrediction) async {
+  Future<void> _selectPlace(PlaceSuggestion enhancedPrediction) async {
     final prediction = enhancedPrediction.suggestion;
     setState(() {
       _isSearching = true;
@@ -482,7 +483,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                                         ),
                                       ),
                                       onTap: () {
-                                        print('🏛️ Selected place: ${place.description}');
+                                        AppLogger.logInfo('🏛️ Selected place: ${place.description}');
                                         _selectPlace(enhancedPlace);
                                         setState(() {
                                           _showSearchOverlay = false;
@@ -1030,7 +1031,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
 
   Timer? _debounceTimer;
   void _onSearchChanged(String query) {
-    print('⌨️ Search text changed: "$query"');
+    AppLogger.logInfo('⌨️ Search text changed: "$query"');
     
     // Cancel previous timer
     _debounceTimer?.cancel();

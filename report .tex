@@ -1,0 +1,386 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{subcaption}
+\usepackage{float}
+
+% Page geometry
+\geometry{
+    left=2.5cm,
+    right=2.5cm,
+    top=3cm,
+    bottom=3cm
+}
+
+% Custom colors
+\definecolor{tourpalblue}{RGB}{0,128,128}
+\definecolor{tourpalteal}{RGB}{64,224,208}
+\definecolor{codecolor}{RGB}{245,245,245}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{TourPal - Technical Report}
+\fancyhead[R]{ICM Project 2024-2025}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Custom section formatting
+\titleformat{\section}
+{\color{tourpalblue}\Large\bfseries}
+{\thesection}{1em}{}
+
+\titleformat{\subsection}
+{\color{tourpalblue}\large\bfseries}
+{\thesubsection}{1em}{}
+
+% Code listings style
+\lstset{
+    backgroundcolor=\color{codecolor},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    deletekeywords={...},
+    escapeinside={\%*}{*)},
+    extendedchars=true,
+    frame=single,
+    keepspaces=true,
+    keywordstyle=\color{blue},
+    language=,
+    morekeywords={*,...},
+    numbers=left,
+    numbersep=5pt,
+    numberstyle=\tiny\color{gray},
+    rulecolor=\color{black},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    stepnumber=1,
+    stringstyle=\color{red},
+    tabsize=2,
+    title=\lstname
+}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=tourpalblue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    pdftitle={TourPal Technical Report},
+    pdfauthor={José Cerqueira, Panos Lekos},
+    pdfsubject={ICM Project Technical Documentation},
+    pdfkeywords={Flutter, Mobile Development, Firebase, Travel App}
+}
+
+\begin{document}
+
+% Title page
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\bfseries\color{tourpalblue} TourPal}\\[0.5cm]
+    {\Large Technical Report}\\[2cm]
+    
+    {\large\bfseries Course:} Intro to Mobile Development (ICM)\\[0.5cm]
+    {\large\bfseries Project:} Travel Guide Platform\\[2cm]
+    
+    {\large\bfseries Authors:}\\[0.5cm]
+    José Cerqueira (76758)\\
+    Panos Lekos (128625)\\[2cm]
+    
+    {\large\bfseries Date:} June 13, 2025\\[2cm]
+    
+    \vfill
+    
+\end{titlepage}
+
+% Table of contents
+\tableofcontents
+\newpage
+
+\section{Overview}
+
+TourPal is a Flutter mobile app that connects travelers with local tour guides through real-time GPS coordination and live tour experiences. The app uses a dual-role system where users can be both travelers and guides, featuring smart booking, real-time tracking, and digital journaling.
+
+Built with Flutter 3.7.2+ and Firebase, the app demonstrates Clean Architecture principles, BLoC state management, and comprehensive real-time features. The main innovation is live tour coordination where guides and travelers can track each other's locations and progress through tour stops in real-time.
+
+\section{Technical Architecture}
+
+\subsection{Architecture Pattern}
+
+The app follows Clean Architecture with three layers:
+
+\begin{lstlisting}
+┌─────────────────────────────────────┐
+│    Presentation (BLoC + UI)         │
+├─────────────────────────────────────┤
+│    Domain (Business Logic)          │
+├─────────────────────────────────────┤
+│    Data (Firebase + Repositories)   │
+└─────────────────────────────────────┘
+\end{lstlisting}
+
+Each feature is organized as data/domain/presentation modules. The presentation layer uses BLoC for state management, domain contains business logic and repository interfaces, and data implements Firebase integration and repository patterns.
+
+\subsection{State Management}
+
+We use BLoC pattern with flutter\_bloc 8.1.6 for predictable state management. The app also leverages Provider 6.1.1 for dependency injection and GetIt 8.0.0 for service location. Dartz 0.10.1 provides functional programming utilities for error handling.
+
+\section{Technology Stack}
+
+\subsection{Core Technologies}
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Technology} & \textbf{Version} & \textbf{Purpose} \\
+\hline
+Flutter & 3.7.2+ & Cross-platform framework \\
+Dart & 3.7.2+ & Programming language \\
+Firebase Suite & Latest & Backend services \\
+Google Maps Flutter & 2.5.0 & Location services \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Key Dependencies}
+
+\textbf{State Management \& Architecture:}
+\begin{itemize}
+    \item flutter\_bloc 8.1.6 - BLoC pattern implementation
+    \item provider 6.1.1 - Dependency injection
+    \item get\_it 8.0.0 - Service locator
+    \item dartz 0.10.1 - Functional programming utilities
+    \item equatable 2.0.5 - Value equality
+\end{itemize}
+
+\textbf{Firebase Integration:}
+\begin{itemize}
+    \item firebase\_core 3.13.1 - Core Firebase functionality
+    \item firebase\_auth 5.5.4 - Authentication
+    \item cloud\_firestore 5.6.8 - Real-time database
+    \item firebase\_storage 12.4.6 - File storage
+    \item firebase\_messaging 15.2.6 - Push notifications
+    \item firebase\_app\_check 0.3.2+6 - App verification
+\end{itemize}
+
+\textbf{Maps \& Location:}
+\begin{itemize}
+    \item google\_maps\_flutter 2.5.0 - Map integration
+    \item geolocator 14.0.1 - GPS location services
+    \item geocoding 3.0.0 - Address conversion
+    \item flutter\_polyline\_points 2.0.0 - Route drawing
+    \item google\_places\_flutter 2.0.9 - Places API
+\end{itemize}
+
+\textbf{Media \& Storage:}
+\begin{itemize}
+    \item image\_picker 1.0.7 - Camera and gallery access
+    \item flutter\_image\_compress 2.1.0 - Image optimization
+    \item cached\_network\_image 3.4.1 - Image caching
+    \item path\_provider 2.1.1 - File system access
+\end{itemize}
+
+\section{Database Design and Security}
+
+\subsection{Firestore Collections}
+
+The database has thirteen main collections optimized for real-time tour coordination:
+\begin{itemize}
+    \item \textbf{users}: User profiles with dual-role support (travelers/guides)
+    \item \textbf{guides}: Guide-specific information with availability subcollections
+    \item \textbf{tourPlans}: Reusable tour templates with places subcollection
+    \item \textbf{tourInstances}: Scheduled tour sessions with participants
+    \item \textbf{bookings}: Reservation management and tour lifecycle
+    \item \textbf{tourSessions}: Live tour coordination with participant locations subcollection
+    \item \textbf{tourProgress}: Tour navigation and progress tracking
+    \item \textbf{userLocations}: Real-time location sharing during active tours
+    \item \textbf{tourJournals}: Traveler experiences with entries subcollection
+    \item \textbf{conversations}: Guide-traveler communication with messages subcollection
+    \item \textbf{reviews}: Tour feedback and rating system
+\end{itemize}
+
+\subsubsection{Subcollections}
+
+Several collections include subcollections for hierarchical data organization:
+\begin{itemize}
+    \item \textbf{guides/availableTimes}: Guide availability schedules
+    \item \textbf{guides/unavailableSlots}: Guide blocked time periods
+    \item \textbf{tourPlans/places}: Tour location details and itineraries
+    \item \textbf{tourSessions/participantLocations}: Real-time location data
+    \item \textbf{tourJournals/entries}: Individual journal entries with photos
+    \item \textbf{conversations/messages}: Chat message history
+\end{itemize}
+
+\subsection{Security Rules}
+
+Firestore security implements comprehensive role-based access with helper functions for authentication and ownership verification:
+
+\begin{lstlisting}[caption=Core Security Functions]
+function isAuthenticated() {
+  return request.auth != null;
+}
+
+function isOwner(userId) {
+  return request.auth.uid == userId;
+}
+
+function isGuide() {
+  return isAuthenticated() && 
+         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isGuide == true;
+}
+
+function isSessionParticipant(sessionData) {
+  return isAuthenticated() && 
+         (request.auth.uid == sessionData.guideId || 
+          request.auth.uid == sessionData.travelerId);
+}
+\end{lstlisting}
+
+\subsubsection{Access Control Patterns}
+
+The security model implements different access patterns for various use cases:
+
+\textbf{Public Discovery:} Collections like \texttt{users}, \texttt{guides}, \texttt{tourPlans}, and \texttt{reviews} allow public read access to enable tour discovery and guide selection.
+
+\textbf{Participant-Only Access:} \texttt{tourSessions}, \texttt{conversations}, and location tracking collections restrict access to authenticated tour participants.
+
+\textbf{Owner-Controlled:} \texttt{bookings} and \texttt{tourJournals} allow only owners to create content, with flexible read permissions for tour coordination.
+
+\textbf{Draft Support:} Tour creation supports draft status with relaxed validation, allowing iterative tour development before publication.
+
+The security rules balance open discovery with strict privacy controls, enabling collaborative tour experiences while protecting sensitive location and personal data.
+
+\section{Key Features}
+
+\subsection{Real-Time Tour Coordination}
+
+The most innovative feature is live tour tracking with custom map markers. Guides and travelers share GPS locations during active tours, with numbered markers showing visit order.
+
+Guides can advance tour progression and handle group coordination scenarios through real-time Firebase synchronization.
+
+\subsection{Booking System}
+
+Calendar-based booking prevents conflicts through real-time availability checking using table\_calendar 3.0.9. Supports booking up to 90 days ahead with flexible 30-minute time slots. Complex status management handles the complete tour lifecycle from booking to completion.
+
+\subsection{Dual-Role Architecture}
+
+Single accounts support both traveler and guide modes with seamless role switching. Users can explore as travelers while also offering guide services, creating a community-driven platform. The guide registration system includes availability management and specialized UI components.
+
+\section{Security and Privacy}
+
+API keys and sensitive configuration use flutter\_dotenv 5.2.1 with .env files excluded from version control. Multi-layer input validation prevents malicious input. Location tracking uses granular permissions through permission\_handler 12.0.0 with clear user consent.
+
+Firebase provides transport encryption while the app implements secure token storage through shared\_preferences 2.2.2 and session management.
+
+\section{Technical Achievements}
+
+\subsection{Key Accomplishments}
+\begin{itemize}
+    \item Clean Architecture implementation with feature-based organization
+    \item Real-time GPS coordination with conflict resolution
+    \item Comprehensive Firebase integration across 6 services
+    \item Complex state management for live tour experiences
+    \item Custom map marker system with Canvas-based rendering
+    \item Smart booking system with availability management
+    \item Dual-role user system with seamless switching
+\end{itemize}
+
+\subsection{Innovation Areas}
+
+The real-time tour coordination moves beyond static booking platforms to dynamic, collaborative experiences. Custom map markers provide intuitive visual feedback about tour progress. The dual-role system recognizes that users often want both traveler and guide capabilities.
+
+Digital journaling transforms passive tour consumption into active memory creation with location-aware entries and real-time photo sharing.
+
+\section{Project Structure}
+
+\subsection{Directory Organization}
+
+The project follows Flutter's standard structure with feature-based organization for scalability and maintainability:
+
+\begin{verbatim}
+tourpal/
+├── lib/                          # Main application code
+│   ├── app.dart                  # App configuration and theming
+│   ├── main.dart                 # Application entry point
+│   ├── core/                     # Shared utilities and services
+│   ├── features/                 # Feature-based modules
+│   │   ├── auth/                 # Authentication system
+│   │   ├── bookings/             # Booking management
+│   │   ├── dashboard/            # Main application screens
+│   │   ├── navigation/           # App navigation system
+│   │   ├── profile/              # User profile management
+│   │   └── tours/                # Tour management & live coordination
+│   ├── models/                   # Shared data models
+│   └── repositories/             # Data access abstractions
+├── .env                          # Environment variables
+├── test/                         # Test files
+├── android/                      # Android platform files
+├── assets/                       # Static assets
+├── firestore.rules               # Database security rules
+├── storage.rules                 # Storage security rules
+├── pubspec.yaml                  # Dependencies and metadata
+└── README.txt                    # Setup instructions
+\end{verbatim}
+
+\subsection{Feature Module Structure}
+
+Each feature follows Clean Architecture principles with consistent organization:
+
+\begin{verbatim}
+features/feature_name/
+├── data/                        # Data layer
+│   ├── datasources/             # Remote/local data sources
+│   ├── models/                  # Data transfer objects
+│   └── repositories/            # Repository implementations
+├── domain/                      # Business logic layer
+│   ├── repositories/            # Repository interfaces
+│   └── usecases/                # Business use cases
+└── presentation/                # UI layer
+    ├── bloc/                    # BLoC state management
+    ├── screens/                 # UI screens
+    └── widgets/                 # Feature-specific widgets
+\end{verbatim}
+
+This modular approach enables independent development, testing, and maintenance of features while maintaining clear separation between layers and dependencies.
+
+\section{Results and Learning}
+
+TourPal demonstrates modern Flutter development with advanced state management, real-time features, and comprehensive backend integration. The project showcases Clean Architecture benefits, Firebase real-time capabilities, and complex UI coordination.
+
+Key learning areas include real-time application architecture, NoSQL database design, location services integration, and production-quality error handling. The custom map marker system demonstrates advanced Canvas manipulation and bitmap generation.
+
+The project proves ability to integrate multiple complex systems (Firebase, Google Maps, real-time coordination) into a cohesive user experience while maintaining clean architecture principles.
+
+\section{Platform Support}
+
+Currently, TourPal supports Android and Windows platforms. The project structure includes comprehensive Android configuration with proper Firebase integration and Google Services setup. Windows support enables desktop development and testing workflows.
+
+Future expansion could include iOS support with minimal architectural changes due to Flutter's cross-platform nature.
+
+\section{Conclusion}
+
+TourPal successfully combines modern mobile development practices with innovative travel technology. The real-time coordination features create new possibilities for collaborative travel experiences while the technical architecture provides a solid foundation for scaling.
+
+The project demonstrates proficiency in Flutter development, Firebase integration, custom UI rendering, and real-time application design within a clean, maintainable architecture. The comprehensive feature set and robust technical implementation showcase advanced mobile development capabilities.
+
+\end{document}

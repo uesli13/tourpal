@@ -3,6 +3,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path/path.dart' as path;
 
+import '../utils/logger.dart';
+
 class ImageUploadService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   
@@ -103,7 +105,7 @@ class ImageUploadService {
         final ref = _storage.refFromURL(url);
         await ref.delete();
       } catch (e) {
-        print('Warning: Failed to delete image $url: $e');
+        AppLogger.logInfo('Warning: Failed to delete image $url: $e');
         // Continue with other deletions even if one fails
       }
     }
@@ -125,7 +127,7 @@ class ImageUploadService {
         await _deleteDirectory(prefix);
       }
     } catch (e) {
-      print('Warning: Failed to delete tour images for $tourId: $e');
+      AppLogger.logInfo('Warning: Failed to delete tour images for $tourId: $e');
     }
   }
 
@@ -219,7 +221,7 @@ class ImageUploadService {
         final ref = _storage.refFromURL(url);
         await ref.delete();
       } catch (e) {
-        print('Warning: Failed to cleanup image $url: $e');
+        AppLogger.logInfo('Warning: Failed to cleanup image $url: $e');
       }
     }
   }
@@ -237,7 +239,7 @@ class ImageUploadService {
         await _deleteDirectory(prefix);
       }
     } catch (e) {
-      print('Warning: Failed to delete directory ${ref.fullPath}: $e');
+      AppLogger.logInfo('Warning: Failed to delete directory ${ref.fullPath}: $e');
     }
   }
 

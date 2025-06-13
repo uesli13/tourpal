@@ -123,7 +123,7 @@ class _InteractivePlacePickerState extends State<InteractivePlacePicker>
       }
 
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        // DEPRECATED: desiredAccuracy: LocationAccuracy.high,
       );
 
       final userLocation = LatLng(position.latitude, position.longitude);

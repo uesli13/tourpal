@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../models/booking.dart';
 import '../../../../models/tour_session.dart';
 import '../../../../models/tour_plan.dart';
@@ -111,7 +112,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
       
       if (mounted) setState(() {});
     } catch (e) {
-      print('Error loading user profiles: $e');
+      AppLogger.logInfo('Error loading user profiles: $e');
     }
   }
 
@@ -143,7 +144,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
       _listenToSessionUpdates();
       setState(() => _isLoading = false);
     } catch (e) {
-      print('Error initializing session: $e');
+      AppLogger.logInfo('Error initializing session: $e');
       setState(() => _isLoading = false);
       _showErrorDialog('Failed to initialize tour session', e.toString());
     }
@@ -163,7 +164,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
         sessionQuery.docs.first.data(),
         sessionQuery.docs.first.id,
       );
-      print('Found existing session: ${session.id}');
+      AppLogger.logInfo('Found existing session: ${session.id}');
       return session;
     } else {
       // No session exists, create new one (this should only happen for guides)
@@ -171,8 +172,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
         throw Exception('No tour session found. Please wait for the guide to start the tour.');
       }
       
-      print('Creating new tour session...');
-      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      AppLogger.logInfo('Creating new tour session...');
       
       final sessionData = {
         'bookingId': widget.booking.id,
@@ -207,7 +207,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
           .add(sessionData);
       
       final newSession = TourSession.fromMap(sessionData, docRef.id);
-      print('Created session: ${newSession.id}');
+      AppLogger.logInfo('Created session: ${newSession.id}');
       return newSession;
     }
   }
@@ -247,7 +247,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
   Future<void> _updateReadiness(bool isReady) async {
     if (_tourSession == null) return;
 
-    print('Updating readiness: ${_isGuide ? "Guide" : "Traveler"} = $isReady');
+    AppLogger.logInfo('Updating readiness: ${_isGuide ? "Guide" : "Traveler"} = $isReady');
     
     final field = _isGuide ? 'guideReady' : 'travelerReady';
     final onlineField = _isGuide ? 'guideOnline' : 'travelerOnline';
@@ -267,7 +267,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
       // If guide is becoming ready, update status to waitingForTraveler
       if (_isGuide && isReady) {
         updateData['status'] = 'waitingForTraveler';
-        print('Guide ready - updating status to waitingForTraveler');
+        AppLogger.logInfo('Guide ready - updating status to waitingForTraveler');
       }
 
       await FirebaseFirestore.instance
@@ -288,16 +288,16 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
           final guideReady = sessionData['guideReady'] ?? false;
           final travelerReady = sessionData['travelerReady'] ?? false;
           
-          print('Readiness check - Guide: $guideReady, Traveler: $travelerReady');
+          AppLogger.logInfo('Readiness check - Guide: $guideReady, Traveler: $travelerReady');
           
           if (guideReady && travelerReady) {
-            print('Both users ready - starting tour session');
+            AppLogger.logInfo('Both users ready - starting tour session');
             await _startTourSession();
           }
         }
       }
     } catch (e) {
-      print('Error updating readiness: $e');
+      AppLogger.logInfo('Error updating readiness: $e');
       _showErrorSnackBar('Failed to update readiness. Please try again.');
     }
   }
@@ -305,7 +305,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
   Future<void> _startTourSession() async {
     if (_tourSession == null) return;
 
-    print('Starting tour session...');
+    AppLogger.logInfo('Starting tour session...');
     try {
       await FirebaseFirestore.instance
           .collection('tourSessions')
@@ -316,7 +316,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
         'updatedAt': Timestamp.now(),
       });
     } catch (e) {
-      print('Error starting tour session: $e');
+      AppLogger.logInfo('Error starting tour session: $e');
       _showErrorSnackBar('Failed to start tour session.');
     }
   }
@@ -457,7 +457,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -497,7 +497,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: (_isGuide ? AppColors.guide : AppColors.primary).withOpacity(0.1),
+              color: (_isGuide ? AppColors.guide : AppColors.primary).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -518,7 +518,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      color: Colors.orange.withOpacity(0.1),
+      color: Colors.orange.withValues(alpha: 0.1),
       child: Row(
         children: [
           const Icon(Icons.wifi_off, color: Colors.orange, size: 20),
@@ -543,7 +543,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -559,7 +559,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
                 height: 60,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   image: widget.tourPlan.coverImageUrl != null
                       ? DecorationImage(
                           image: NetworkImage(widget.tourPlan.coverImageUrl!),
@@ -652,7 +652,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -749,7 +749,7 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
@@ -785,8 +785,8 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: isReady 
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.orange.withOpacity(0.1),
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isReady ? Colors.green : Colors.orange,
@@ -908,10 +908,10 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: instructionColor.withOpacity(0.1),
+        color: instructionColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: instructionColor.withOpacity(0.3),
+          color: instructionColor.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -942,9 +942,9 @@ class _TourSessionScreenState extends State<TourSessionScreen> with TickerProvid
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.1),
+        color: Colors.grey.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

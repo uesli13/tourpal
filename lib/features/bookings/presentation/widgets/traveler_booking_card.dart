@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../models/booking.dart';
 import '../../../../models/tour_plan.dart';
 import '../../../../models/user.dart';
@@ -17,9 +18,9 @@ class TravelerBookingCard extends StatelessWidget {
     super.key,
     required this.booking,
     this.onViewDetails,
-    this.onJoinTour, // Added join tour callback
+    this.onJoinTour,
     this.onCancel,
-    this.onViewJournal, // Added view journal callback
+    this.onViewJournal,
   });
 
   @override
@@ -38,7 +39,7 @@ class TravelerBookingCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               Colors.white,
-              AppColors.backgroundLight.withOpacity(0.3),
+              AppColors.backgroundLight.withValues(alpha: 0.3),
             ],
           ),
         ),
@@ -48,7 +49,7 @@ class TravelerBookingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _getStatusColor(booking.status).withOpacity(0.1),
+                color: _getStatusColor(booking.status).withValues(alpha: 0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -64,9 +65,9 @@ class TravelerBookingCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -208,7 +209,7 @@ class TravelerBookingCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.surface,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.outline.withOpacity(0.3)),
+                            border: Border.all(color: AppColors.outline.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
@@ -217,7 +218,7 @@ class TravelerBookingCard extends StatelessWidget {
                                 backgroundImage: guide.hasProfileImage
                                     ? NetworkImage(guide.profileImageUrl!)
                                     : null,
-                                backgroundColor: AppColors.guide.withOpacity(0.1),
+                                backgroundColor: AppColors.guide.withValues(alpha: 0.1),
                                 child: !guide.hasProfileImage
                                     ? Icon(Icons.person, color: AppColors.guide, size: 20)
                                     : null,
@@ -241,7 +242,7 @@ class TravelerBookingCard extends StatelessWidget {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: AppColors.guide.withOpacity(0.1),
+                                            color: AppColors.guide.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: const Text(
@@ -280,7 +281,7 @@ class TravelerBookingCard extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 20,
-                              backgroundColor: AppColors.guide.withOpacity(0.1),
+                              backgroundColor: AppColors.guide.withValues(alpha: 0.1),
                               child: Icon(Icons.person, color: AppColors.guide, size: 20),
                             ),
                             const SizedBox(width: 12),
@@ -371,9 +372,9 @@ class TravelerBookingCard extends StatelessWidget {
                                       width: double.infinity,
                                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                                       decoration: BoxDecoration(
-                                        color: Colors.orange.withOpacity(0.1),
+                                        color: Colors.orange.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                                        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                                       ),
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
@@ -441,7 +442,7 @@ class TravelerBookingCard extends StatelessWidget {
                             label: const Text('View Details'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.textSecondary,
-                              side: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
+                              side: BorderSide(color: AppColors.textSecondary.withValues(alpha: 0.3)),
                             ),
                           ),
                         ),
@@ -492,9 +493,9 @@ class TravelerBookingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -558,7 +559,7 @@ class TravelerBookingCard extends StatelessWidget {
         return TourPlan.fromMap(doc.data()!, doc.id);
       }
     } catch (e) {
-      print('Error fetching tour plan: $e');
+      AppLogger.logInfo('Error fetching tour plan: $e');
     }
     return null;
   }
@@ -586,7 +587,7 @@ class TravelerBookingCard extends StatelessWidget {
         }
       }
     } catch (e) {
-      print('Error fetching guide: $e');
+      AppLogger.logInfo('Error fetching guide: $e');
     }
     return null;
   }

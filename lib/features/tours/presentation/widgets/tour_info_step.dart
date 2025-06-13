@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
 
 class TourInfoStep extends StatefulWidget {
   final String title;
@@ -305,7 +306,7 @@ class _TourInfoStepState extends State<TourInfoStep>
                             );
                           },
                           errorBuilder: (context, error, stackTrace) {
-                            print('Image loading error: $error'); // Debug log
+                            AppLogger.logInfo('Image loading error: $error'); // Debug log
                             return Container(
                               decoration: BoxDecoration(
                                 color: AppColors.errorOverlay(),
